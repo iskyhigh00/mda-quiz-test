@@ -1323,10 +1323,8 @@ async function loadScoresMgmt(){
   if(!list)return;
   list.innerHTML='<div class="loading">Cargando...</div>';
   try{
-    // EL ERROR: Si la tabla 'scores' está vacía o el filtro falla, 's' no devuelve nada
     const s=await sbGet('/rest/v1/scores?order=pts.desc&limit=500');
     
-    // CORRECCIÓN: Validar si 's' es null o no tiene elementos antes de usar .filter
     if(!s || !s.length){ 
       list.innerHTML='<div class="no-data">No hay puntajes registrados.</div>';
       return;
@@ -1340,11 +1338,26 @@ async function loadScoresMgmt(){
       return;
     }
 
-    list.innerHTML='<table><thead><tr><th>Jugador</th><th>Puntaje</th><th>Estado</th><th>Fecha</th><th></th></tr></thead><tbody>'+
+    // Corrección: Se añade la columna y el botón para eliminar cada puntaje
+    list.innerHTML='<table><thead><tr><th>Jugador</th><th>Puntaje</th><th>Estado</th><th>Fecha</th><th>Acción</th></tr></thead><tbody>'+
       filtered.map(x=>'<tr><td><strong>'+x.name+'</strong></td><td style="color:var(--accent2);font-weight:800">'+x.pts+'</td><td>'+(x.completed?'&#9989; Fin':'&#9203; Activo')+'</td><td style="color:var(--muted);font-size:0.8rem">'+x.created_at+'</td><td><button class="btn btn-danger btn-sm" onclick="deleteScore('+x.id+')">&#128465;</button></td></tr>').join('')+
       '</tbody></table>';
   }catch(e){
     list.innerHTML='<div class="no-data">Error: '+e.message+'</div>';
+  }
+}
+
+// Nueva función necesaria para ejecutar la eliminación en Supabase
+async function deleteScore(id){
+  if(!confirm('¿Estás seguro de que deseas eliminar este puntaje permanentemente?')) return;
+  try {
+    // Reemplaza con tu método correspondiente para DELETE (ej: sbDelete o sbPost con cabeceras)
+    // Si usas una función estándar de Fetch o Axios estructurada en tu proyecto:
+    await sbGet('/rest/v1/scores?id=eq.'+id, { method: 'DELETE' }); 
+    alert('Puntaje eliminado con éxito.');
+    loadScoresMgmt(); // Recarga la lista automáticamente
+  } catch(e) {
+    alert('Error al eliminar: ' + e.message);
   }
 }
 function renderScoresMgmt(){
