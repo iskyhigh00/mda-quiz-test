@@ -185,6 +185,13 @@ tbody tr.me td{background:rgba(124,58,237,0.08);}
 .photo-main-badge{position:absolute;bottom:2px;left:2px;background:var(--gold);color:#000;font-size:0.5rem;font-weight:800;padding:1px 4px;border-radius:3px;}
 .photo-set-main{position:absolute;top:-6px;left:-6px;background:var(--accent2);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:0.65rem;cursor:pointer;font-weight:800;}
 .upload-progress{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 14px;font-size:0.8rem;color:var(--accent2);margin-top:8px;display:none;}
+
+.winner-row{padding:14px 16px;border-bottom:1px solid var(--border);font-size:0.82rem;}
+.winner-row:last-child{border-bottom:none;}
+.winner-row strong{color:var(--gold);}
+.winner-row .winner-prize{color:var(--green);font-weight:700;}
+.winner-row .winner-date{color:var(--muted);font-size:0.75rem;margin-top:3px;}
+.player-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;background:var(--surface);transition:background 0.15s;}.player-header:hover{background:rgba(124,58,237,0.08);}
 </style>
 </head>
 <body>
@@ -214,8 +221,9 @@ tbody tr.me td{background:rgba(124,58,237,0.08);}
     <div class="form-group">
       <label class="form-label">N&#250;mero de preguntas</label>
       <div class="chips">
-        <div class="chip active" onclick="pickChip('q',5,this)">5</div>
-        <div class="chip" onclick="pickChip('q',10,this)">10</div>
+        <div class="chip active" onclick="pickChip('q',5,this)">5 <span style="font-size:0.65rem;opacity:0.8;">(max 1000)</span></div>
+        <div class="chip" onclick="pickChip('q',10,this)">10 <span style="font-size:0.65rem;opacity:0.8;">(max 1200)</span></div>
+        <div class="chip" onclick="pickChip('q',20,this)">20 <span style="font-size:0.65rem;opacity:0.8;">(max 1300)</span></div>
       </div>
     </div>
     <div class="form-group">
@@ -279,47 +287,136 @@ tbody tr.me td{background:rgba(124,58,237,0.08);}
   </div>
   <button class="play-again" onclick="goTo('setup')">&#8635; Jugar de nuevo</button>
   <div class="section-box">
-    <div class="lb-head">&#127942; Puntajes <button class="lb-clear" onclick="clearScores()">Borrar</button></div>
+    <div class="lb-head">&#127942; Puntajes</div>
     <div id="lb-body"><div class="loading">Cargando...</div></div>
   </div>
 </div>
 <div id="view-ranking" class="view">
   <div id="prize-banner-wrap"></div>
   <div class="section-box">
-    <div class="lb-head">&#127942; Ranking global <button class="lb-clear" onclick="clearScores()">Borrar tabla</button></div>
+    <div class="lb-head">&#127942; Ranking global</div>
     <div id="ranking-lb-body"><div class="loading">Cargando...</div></div>
+  </div>
+  <div class="section-box" style="margin-top:18px;">
+    <div class="lb-head">&#127942; Historial de ganadores</div>
+    <div id="winners-history-body"><div class="loading">Cargando...</div></div>
   </div>
 </div>
 <div id="view-admin" class="view">
   <div class="section-box">
-    <div class="section-head">&#127873; Texto del premio <button class="btn btn-primary btn-sm" onclick="savePrizeText()">Guardar</button></div>
-    <div style="padding:14px;">
-      <textarea id="prize-input" placeholder="Ej: El mejor puntaje del mes gana 1 hora libre..." style="width:100%;background:var(--surface);border:2px solid var(--border);color:var(--text);padding:10px 13px;border-radius:9px;font-size:0.88rem;outline:none;resize:vertical;min-height:65px;-webkit-user-select:text;user-select:text;"></textarea>
+    <div class="section-head">&#127942; Competencia <span id="comp-status-badge" style="font-size:0.7rem;padding:3px 10px;border-radius:10px;font-weight:700;"></span></div>
+    <div style="padding:14px;display:flex;flex-direction:column;gap:12px;">
+      <div>
+        <label class="form-label">Premio</label>
+        <input class="modal-input" id="prize-input" placeholder="Ej: 1 hora libre" style="-webkit-user-select:text;user-select:text;" oninput="resetConfig.prize=this.value;">
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:90px;"><label class="form-label">D\u00edas</label>
+          <input class="modal-input" id="comp-days" type="number" placeholder="7" min="0" max="365" value="7"></div>
+        <div style="flex:1;min-width:90px;"><label class="form-label">Horas</label>
+          <input class="modal-input" id="comp-hours" type="number" placeholder="0" min="0" max="23" value="0"></div>
+      </div>
+      <div id="comp-info" style="background:var(--surface);border-radius:9px;padding:10px 14px;font-size:0.82rem;color:var(--muted);"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-primary" id="comp-start-btn" onclick="startCompetition()">&#9654; Iniciar competencia</button>
+        <button class="btn btn-secondary" id="comp-addtime-btn" onclick="addCompetitionTime()" style="display:none;">+ Agregar tiempo</button>
+        <button class="btn btn-danger" id="comp-stop-btn" onclick="stopCompetition()" style="display:none;">&#9632; Detener ahora</button>
+      </div>
     </div>
   </div>
-  <div class="admin-toolbar">
+  <div class="admin-toolbar" id="admin-toolbar-wrap" style="display:none">
     <input class="admin-search" id="admin-search" placeholder="Buscar modelo..." oninput="renderAdmin()">
     <button class="btn btn-primary" onclick="openAdd()">+ Agregar</button>
     <button class="btn btn-danger" onclick="resetPhotos()">&#128247; Reset fotos</button>
     <span class="sync-badge sync-loading" id="sync-badge">...</span>
   </div>
   <div class="section-box">
-    <div class="section-head">&#127920; Modelos <span id="admin-count"></span></div>
-    <div id="admin-list"></div>
+    <div class="section-head" onclick="toggleModels()" style="cursor:pointer;">&#127920; Modelos <span id="admin-count"></span> <span id="models-toggle" style="float:right;color:var(--muted);font-size:0.8rem;">&#9650; ocultar</span></div>
+    <div id="admin-list-wrap" style="display:none"><div id="admin-list"></div></div>
   </div>
+  
+  <div class="section-box" style="margin-bottom:18px;">
+    <div class="section-head">&#127919; Puntaje m&#225;ximo por cantidad de preguntas
+      <button class="btn btn-primary btn-sm" onclick="saveMaxPts()">Guardar</button>
+    </div>
+    <div style="padding:14px;display:flex;gap:12px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:120px;"><label class="form-label">5 preguntas</label>
+        <input class="modal-input" id="max-pts-5" type="number" placeholder="1000" min="100" max="9999"></div>
+      <div style="flex:1;min-width:120px;"><label class="form-label">10 preguntas</label>
+        <input class="modal-input" id="max-pts-10" type="number" placeholder="1200" min="100" max="9999"></div>
+      <div style="flex:1;min-width:120px;"><label class="form-label">20 preguntas</label>
+        <input class="modal-input" id="max-pts-20" type="number" placeholder="1300" min="100" max="9999"></div>
+    </div>
+    <div style="padding:0 14px 12px;font-size:0.75rem;color:var(--muted);">Se reflejan en el quiz y en los chips de selecci&#243;n.</div>
+  </div>
+
+  <!-- SEASONS HISTORY -->
+  <div class="section-box" style="margin-bottom:18px;">
+    <div class="section-head" onclick="toggleSection('seasons-wrap','toggle-seasons')" style="cursor:pointer;">
+      &#128197; Historial por per&#237;odo
+      <span id="toggle-seasons" style="float:right;color:var(--muted);font-size:0.8rem;">&#9660; mostrar</span>
+    </div>
+    <div id="seasons-wrap" style="display:none;">
+      <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <select id="season-select" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:8px;font-size:0.85rem;outline:none;cursor:pointer;" onchange="loadSeasonData()">
+          <option value="">-- Seleccionar per&#237;odo --</option>
+        </select>
+        <button class="btn btn-secondary btn-sm" onclick="loadSeasonList()">&#8635; Actualizar</button>
+      </div>
+      <div id="season-data"><div class="no-data" style="padding:20px;">Selecciona un per&#237;odo.</div></div>
+    </div>
+  </div>
+
+  <!-- SCORES MANAGEMENT -->
+  <div class="section-box" style="margin-bottom:18px;">
+    <div class="section-head" onclick="toggleSection('scores-mgmt-wrap','toggle-scores-mgmt'); if(document.getElementById('scores-mgmt-wrap').style.display!=='none') loadScoresMgmt();" style="cursor:pointer;">
+      &#127942; Gestionar puntajes
+      <span id="toggle-scores-mgmt" style="float:right;color:var(--muted);font-size:0.8rem;">&#9660; mostrar</span>
+    </div>
+    <div id="scores-mgmt-wrap" style="display:none">
+      <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <input id="scores-search" class="admin-search" style="max-width:200px;" placeholder="Buscar jugador..." oninput="renderScoresMgmt()">
+        <button class="btn btn-secondary btn-sm" onclick="loadScoresMgmt()">&#8635; Actualizar</button>
+      </div>
+      <div id="scores-mgmt-list"><div class="loading">Cargando...</div></div>
+    </div>
+  </div>
+
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
     <div style="font-size:0.9rem;font-weight:800;color:var(--accent2);">&#128200; Estad&#237;sticas</div>
     <button class="refresh-btn" onclick="loadStats()">&#8635; Actualizar</button>
   </div>
   <div class="stats-grid" id="stats-global"></div>
-  <div class="section-box"><div class="section-head">&#128100; Jugadores</div><div id="stats-players"><div class="loading">Cargando...</div></div></div>
-  <div class="section-box"><div class="section-head">&#127919; Tasa de acierto por m&#225;quina</div><div id="stats-machines-acc"><div class="loading">Cargando...</div></div></div>
-  <div class="section-box"><div class="section-head">&#9201; Velocidad promedio</div><div id="stats-speed"><div class="loading">Cargando...</div></div></div>
-  <div class="section-box"><div class="section-head">&#128197; Actividad &#250;ltimos 14 d&#237;as</div><div id="stats-activity"><div class="loading">Cargando...</div></div></div>
+  <div class="section-box"><div class="section-head" onclick="toggleSection('stats-players-wrap','toggle-players')" style="cursor:pointer;">&#128100; Jugadores <span id="toggle-players" style="float:right;color:var(--muted);font-size:0.8rem;">&#9660; mostrar</span></div><div id="stats-players-wrap" style="display:none"><div id="stats-players"><div class="loading">Cargando...</div></div></div></div>
+  <div class="section-box"><div class="section-head" onclick="toggleSection('stats-machines-wrap','toggle-machines')" style="cursor:pointer;">&#127919; Tasa de acierto por m&#225;quina <span id="toggle-machines" style="float:right;color:var(--muted);font-size:0.8rem;">&#9660; mostrar</span></div><div id="stats-machines-wrap" style="display:none"><div id="stats-machines-acc"><div class="loading">Cargando...</div></div></div></div>
+  <div class="section-box"><div class="section-head" onclick="toggleSection('stats-speed-wrap','toggle-speed')" style="cursor:pointer;">&#9201; Velocidad promedio <span id="toggle-speed" style="float:right;color:var(--muted);font-size:0.8rem;">&#9660; mostrar</span></div><div id="stats-speed-wrap" style="display:none"><div id="stats-speed"><div class="loading">Cargando...</div></div></div></div>
+  <div class="section-box"><div class="section-head" onclick="toggleSection('stats-activity-wrap','toggle-activity')" style="cursor:pointer;">&#128197; Actividad &#250;ltimos 14 d&#237;as <span id="toggle-activity" style="float:right;color:var(--muted);font-size:0.8rem;">&#9660; mostrar</span></div><div id="stats-activity-wrap" style="display:none"><div id="stats-activity"><div class="loading">Cargando...</div></div></div></div>
+</div>
+
+<div id="countdown-overlay" style="display:none;position:fixed;inset:0;z-index:998;background:rgba(10,10,18,0.97);flex-direction:column;align-items:center;justify-content:center;gap:20px;">
+  <div id="cd-status" style="font-size:0.9rem;font-weight:700;color:#64748b;">Cargando...</div>
+  <div id="cd-num" style="font-size:6rem;font-weight:900;color:#06b6d4;line-height:1;"></div>
+  <div style="background:#2d2d4e;border-radius:4px;height:6px;width:220px;overflow:hidden;"><div id="cd-bar" style="height:100%;background:linear-gradient(90deg,#7c3aed,#06b6d4);border-radius:4px;width:0%;transition:width 0.15s linear;"></div></div>
+</div>
+
+<div id="modal-score" class="modal">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-title" id="modal-score-title">Editar puntaje</div>
+    <div class="modal-group"><label class="modal-label">Nombre</label><input class="modal-input" id="score-name" placeholder="Nombre del jugador"></div>
+    <div class="modal-group"><label class="modal-label">Puntaje</label><input class="modal-input" id="score-pts" type="number" min="0" max="9999"></div>
+    <div class="modal-group"><label class="modal-label">Precisi&#243;n (%)</label><input class="modal-input" id="score-acc" type="number" min="0" max="100"></div>
+    <div class="modal-group"><label class="modal-label">Segundos</label><input class="modal-input" id="score-sec" type="number" min="5" max="15"></div>
+    <div class="modal-btns"><button class="btn btn-primary" onclick="saveScore_mgmt()">Guardar</button><button class="btn btn-secondary" onclick="closeModal('modal-score')">Cancelar</button></div>
+  </div>
 </div>
 <div id="lightbox" onclick="closeLb()">
   <div class="lb-box" onclick="event.stopPropagation()">
     <div class="lb-img"><img id="lb-img" src="" alt="" draggable="false"></div>
+    <div id="lb-nav" style="display:none;align-items:center;justify-content:space-between;padding:8px 20px;">
+      <button onclick="galleryNav(-1)" style="background:var(--surface);border:1px solid var(--border);color:var(--text);width:36px;height:36px;border-radius:8px;cursor:pointer;font-size:1.1rem;">&#8249;</button>
+      <span id="lb-counter" style="font-size:0.8rem;color:var(--muted);font-weight:700;"></span>
+      <button onclick="galleryNav(1)" style="background:var(--surface);border:1px solid var(--border);color:var(--text);width:36px;height:36px;border-radius:8px;cursor:pointer;font-size:1.1rem;">&#8250;</button>
+    </div>
     <div class="lb-name" id="lb-name"></div>
     <button class="lb-close" onclick="closeLb()">Cerrar</button>
   </div>
@@ -402,11 +499,19 @@ let cfg={q:5,t:5}, playerName='', lastScore=0;
 
 /* ── NAV ── */
 function goTo(v){
+  const currentView = document.querySelector('.view.active')?.id;
+  if(currentView==='view-quiz' && v!=='quiz' && v!=='results'){
+    clearTimers();
+    const overlay=document.getElementById('countdown-overlay');
+    if(overlay) overlay.style.display='none';
+    if(qNum>0) saveIncompleteGame();
+    qNum=0; qTotal=0; qQueue=[];
+  }
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
   document.getElementById('view-'+v).classList.add('active');
   document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',
     (v==='catalog'&&i===0)||((v==='setup'||v==='quiz'||v==='results')&&i===1)||(v==='ranking'&&i===2)||(v==='admin'&&i===3)));
-  if(v==='ranking'){loadRanking();loadPrizeText();}
+  if(v==='ranking'){loadRanking();loadCompetition();loadWinnersHistory();}
   if(v==='setup'){
     const pw=MACHINES.filter(m=>m.photo_url).length;
     const w=document.getElementById('no-img-warn');if(w)w.style.display=pw<4?'block':'none';
@@ -444,14 +549,40 @@ function buildCatalog(){
   if(!MACHINES.length){g.innerHTML='<div class="loading">Sin modelos. Agrega desde Admin.</div>';return;}
   MACHINES.forEach(m=>{
     const c=document.createElement('div');c.className='card';c.dataset.name=m.name.toLowerCase();
+    const allPhotos=[m.photo_url,...(m.photo_urls||[])].filter(Boolean);
+    const badge=allPhotos.length>1?'<span style="position:absolute;top:6px;right:6px;background:var(--accent);color:#fff;font-size:0.6rem;font-weight:800;padding:2px 7px;border-radius:10px;">'+allPhotos.length+' \u{1F4F7}</span>':'';
     const ih=m.photo_url
-      ?'<img src="'+getImgUrl(m.photo_url)+'" loading="lazy" draggable="false">'
+      ?'<div style="position:relative;width:100%;height:100%;">'+badge+'<img src="'+getImgUrl(m.photo_url)+'" loading="lazy" draggable="false"></div>'
       :'<div class="card-no-img">&#127920;</div>';
     c.innerHTML='<div class="card-img">'+ih+'</div><div class="card-label">'+m.name+'</div>';
-    if(m.photo_url)c.onclick=()=>{document.getElementById('lb-img').src=getImgUrl(m.photo_url);document.getElementById('lb-name').textContent=m.name;document.getElementById('lightbox').classList.add('open');};
+    if(m.photo_url)c.onclick=()=>openGallery(m);
     g.appendChild(c);
   });
   filterCatalog();
+}
+
+let galleryPhotos=[],galleryIdx=0;
+function openGallery(m){
+  galleryPhotos=[m.photo_url,...(m.photo_urls||[])].filter(Boolean);
+  galleryIdx=0;
+  document.getElementById('lb-name').textContent=m.name;
+  renderGalleryPhoto();
+  document.getElementById('lightbox').classList.add('open');
+}
+function renderGalleryPhoto(){
+  const img=document.getElementById('lb-img');
+  img.src=getImgUrl(galleryPhotos[galleryIdx]);
+  const nav=document.getElementById('lb-nav');
+  if(nav){
+    if(galleryPhotos.length>1){
+      nav.style.display='flex';
+      nav.querySelector('#lb-counter').textContent=(galleryIdx+1)+' / '+galleryPhotos.length;
+    }else{nav.style.display='none';}
+  }
+}
+function galleryNav(dir){
+  galleryIdx=(galleryIdx+dir+galleryPhotos.length)%galleryPhotos.length;
+  renderGalleryPhoto();
 }
 function filterCatalog(){
   const q=document.getElementById('search').value.toLowerCase();let v=0;
@@ -475,27 +606,45 @@ function vipMult(){
   return playerName.trim().toLowerCase()==='messa' ? 1.3 : 1;
 }
 function timerMult(){return{5:1.0,10:0.7}[cfg.t]||1.0;}
+function graceExtra(){
+  // obrist gets 0.5s extra grace on top of normal grace
+  return playerName.trim().toLowerCase()==='obrist' ? 0.5 : 0;
+}
 function calcPts(ms){
   const raw = Math.min(ms/(cfg.t*1000), 1);
-  // Grace period only for 5s mode: first 1s = full score
-  const frac = (cfg.t===5) ? Math.max(0, (raw - 0.20) / 0.80) : raw;
+  // Grace period: 5s=1s, 10s=0s, plus obrist bonus
+  const baseGrace = cfg.t===5 ? 0.20 : 0;
+  const extraGrace = graceExtra() / cfg.t;
+  const totalGrace = Math.min(baseGrace + extraGrace, 0.99);
+  const frac = totalGrace > 0 ? Math.max(0, (raw - totalGrace) / (1 - totalGrace)) : raw;
   const speedBonus = 90 * (1 - frac) * timerMult();
   return Math.round((10 + speedBonus) * vipMult());
 }
 
-function restartQuiz(){
-  // Restart with same settings instantly, skip countdown since images already cached
+
+async function saveIncompleteGame(){
+  if(!playerName || qNum===0) return;
+  const acc = qTotal>0 ? Math.round(qCorrect/qTotal*100) : 0;
+  try{
+    await sbPost('/rest/v1/scores',{
+      name:playerName, pts:qScore, correct:qCorrect,
+      total:qNum, timer_sec:cfg.t, accuracy:acc, completed:false
+    });
+  }catch(e){console.error('saveIncomplete failed',e);}
+}
+async function restartQuiz(){
+  if(qNum>0){ await saveIncompleteGame(); }
   const pl=MACHINES.filter(m=>m.photo_url);
   if(pl.length<4) return;
   const cnt=cfg.q>=999?pl.length:Math.min(cfg.q,pl.length);
   qQueue=shuffle(pl.map((_,i)=>i)).slice(0,cnt);
   qTotal=qQueue.length;qNum=0;qCorrect=0;qWrong=0;qScore=0;lastScore=0;
   clearTimers();
-  // Images already cached, go directly
   document.getElementById('q-ok').textContent=0;
   document.getElementById('q-err').textContent=0;
   document.getElementById('q-pts').textContent=0;
-  nextQ();
+  // Run countdown again (images already cached so loading is instant)
+  preloadAndCountdown(pl);
 }
 
 function startQuiz(){
@@ -526,15 +675,20 @@ async function preloadAndCountdown(pl){
   const cdBar = document.getElementById('cd-bar');
   overlay.style.display = 'flex';
 
-  const toLoad = qQueue.map(i => pl[i]).filter(m => m.photo_url);
-  const failed = new Set();
+  // Build list of machines to preload from current qQueue
+  // Collect ALL photos (main + extras) from queued machines
+  const toLoadMachines = qQueue.map(i => pl[i]).filter(m => m && m.photo_url);
+  const toLoad = [];
+  toLoadMachines.forEach(m=>{
+    [m.photo_url,...(m.photo_urls||[])].filter(Boolean).forEach(url=>toLoad.push({photo_url:url}));
+  });
   let loaded = 0;
+  const failed = new Set();
 
   cdStatus.textContent = 'Cargando imágenes... 0/' + toLoad.length;
   cdBar.style.width = '0%';
 
   await Promise.all(toLoad.map(m => new Promise(resolve => {
-    // Already cached — skip
     if(imgCache[m.photo_url] && imgCache[m.photo_url] !== 'error'){
       loaded++;
       cdStatus.textContent = 'Cargando imágenes... ' + loaded + '/' + toLoad.length;
@@ -550,7 +704,6 @@ async function preloadAndCountdown(pl){
       resolve();
     };
     img.onerror = () => {
-      // Mark as failed — will be skipped in quiz
       imgCache[m.photo_url] = 'error';
       failed.add(m.photo_url);
       loaded++;
@@ -561,13 +714,19 @@ async function preloadAndCountdown(pl){
     img.src = m.photo_url;
   })));
 
-  // Remove failed images from queue
+  // Only rebuild qQueue if there were failures (don't touch it otherwise)
   if(failed.size > 0){
-    const before = qQueue.length;
-    const validPl = pl.filter(m => imgCache[m.photo_url] && imgCache[m.photo_url] !== 'error');
-    qQueue = shuffle(validPl.map((_,i)=>i)).slice(0, qTotal);
+    // Filter qQueue to remove failed images
+    qQueue = qQueue.filter(i => {
+      const m = pl[i];
+      return m && m.photo_url && imgCache[m.photo_url] !== 'error';
+    });
     qTotal = qQueue.length;
-    if(qTotal < 4){ overlay.style.display='none'; alert('No hay suficientes imágenes disponibles. Verifica tu conexión.'); return; }
+    if(qTotal < 4){
+      overlay.style.display = 'none';
+      alert('No hay suficientes imágenes disponibles. Verifica tu conexión.');
+      return;
+    }
   }
 
   // Countdown 3-2-1
@@ -593,14 +752,17 @@ function nextQ(){
   qIdx=MACHINES.indexOf(m);
   document.getElementById('prog-lbl').textContent=qNum+'/'+qTotal;
   document.getElementById('prog-bar').style.width=((qNum-1)/qTotal*100)+'%';
+  // Pick a RANDOM photo from this machine (main + extras)
+  const photos=[m.photo_url,...(m.photo_urls||[])].filter(Boolean);
+  const chosenPhoto=photos[Math.floor(Math.random()*photos.length)];
   const img=document.getElementById('quiz-img');
-  const cached = imgCache[m.photo_url];
+  const cached = imgCache[chosenPhoto];
   if(cached && cached !== 'error' && cached.complete){
     img.src = cached.src;
     img.style.opacity='1';
   } else {
     img.style.opacity='0.3';
-    setTimeout(()=>{img.src=getImgUrl(m.photo_url);img.style.opacity='1';},80);
+    setTimeout(()=>{img.src=getImgUrl(chosenPhoto);img.style.opacity='1';},80);
   }
   const cn=m.name;
   const pool=shuffle(pl.filter((x,i)=>i!==qQueue[qNum-1]&&x.name!==cn));
@@ -659,7 +821,8 @@ async function endQuiz(){
   document.getElementById('r-name').textContent=playerName;
   document.getElementById('r-score').textContent=qScore;
   // Normalize score to base 10 questions so all modes are comparable
-  const normalizedScore = Math.round(qScore * (10 / qTotal));
+  const targetMax = qTotal <= 5 ? (maxPtsConfig[5]||1000) : qTotal <= 10 ? (maxPtsConfig[10]||1200) : (maxPtsConfig[20]||1300);
+  const normalizedScore = Math.round(qScore * targetMax / (qTotal * 100));
   lastScore = normalizedScore;
   document.getElementById('r-sub').textContent=qCorrect+' correctas de '+qTotal+' · '+cfg.t+'s';
   document.getElementById('r-ok').textContent=qCorrect;
@@ -671,17 +834,24 @@ async function endQuiz(){
 }
 
 /* ── SCORES ── */
-async function saveScore(name,pts,correct,total,sec,accuracy){try{await sbPost('/rest/v1/scores',{name,pts,correct,total,timer_sec:sec,accuracy});}catch(e){}}
-async function recordAnswer(mn,correct,timeMs,pts){try{await sbPost('/rest/v1/quiz_answers',{player_name:playerName,machine_name:mn,correct,time_ms:timeMs,pts,timer_sec:cfg.t});}catch(e){}}
+async function saveScore(name,pts,correct,total,sec,accuracy){try{await sbPost('/rest/v1/scores',{name,pts,correct,total,timer_sec:sec,accuracy,completed:true,season:(compState.active?'current':'practica')});}catch(e){}}
+async function recordAnswer(mn,correct,timeMs,pts){try{await sbPost('/rest/v1/quiz_answers',{player_name:playerName,machine_name:mn,correct,time_ms:timeMs,pts,timer_sec:cfg.t,season:(compState.active?'current':'practica')});}catch(e){}}
 function getClaveHora(){const n=new Date();return String(n.getHours()).padStart(2,'0')+String(n.getMinutes()).padStart(2,'0');}
 
 async function clearScores(){
   const input=prompt('Clave:');if(!input)return;
   if(input.trim()!==getClaveHora()){alert('Clave incorrecta.');return;}
+  if(!confirm('Los puntajes actuales se archivarán (no se borran). ¿Continuar?'))return;
   try{
-    const [r1,r2]=await Promise.all([sbDelete('/rest/v1/scores?id=gt.0'),sbDelete('/rest/v1/quiz_answers?id=gt.0')]);
-    if(r1.ok||r1.status===204){alert('Puntajes borrados.');renderLeaderboard();loadRanking();}
-    else{const t=await r1.text();alert('Error '+r1.status+': '+t);}
+    const seasonLabel='Archivado '+new Date().toLocaleDateString('es-CL');
+    const [r1,r2]=await Promise.all([
+      sbFetch('/rest/v1/scores?season=eq.current',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({season:seasonLabel})}),
+      sbFetch('/rest/v1/quiz_answers?season=eq.current',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({season:seasonLabel})})
+    ]);
+    if(r1.ok||r1.status===204){
+      alert('Puntajes archivados como '+seasonLabel+'.');
+      renderLeaderboard();loadRanking();
+    }else{const t=await r1.text();alert('Error '+r1.status+': '+t);}
   }catch(e){alert('Error: '+e.message);}
 }
 
@@ -689,16 +859,16 @@ async function renderLeaderboard(){
   const body=document.getElementById('lb-body');if(!body)return;
   body.innerHTML='<div class="loading">Cargando...</div>';
   try{
-    const s=await sbGet('/rest/v1/scores?order=pts.desc&limit=500');
+    const s=(await sbGet('/rest/v1/scores?season=eq.current&order=pts.desc&limit=500')).filter(x=>x.completed!==false);
     if(!s.length){body.innerHTML='<div class="no-data">Sin puntajes.</div>';return;}
     // Group by name, keep best score
     const best={};
     s.forEach(x=>{if(!best[x.name]||x.pts>best[x.name].pts)best[x.name]=x;});
     const top=Object.values(best).sort((a,b)=>b.pts-a.pts).slice(0,50);
     const M=['&#129351;','&#129352;','&#129353;'];
-    body.innerHTML='<table><thead><tr><th>#</th><th>Nombre</th><th>Mejor puntaje</th><th>Prec.</th><th>Seg.</th><th>Fecha</th></tr></thead><tbody>'+
+    body.innerHTML='<table><thead><tr><th>#</th><th>Nombre</th><th>Mejor puntaje</th><th>Preguntas</th><th>Prec.</th><th>Seg.</th><th>Fecha</th></tr></thead><tbody>'+
       top.map((x,i)=>{const f=new Date(x.created_at).toLocaleDateString('es-CL');const me=x.name===playerName&&x.pts===lastScore;
-        return '<tr class="rank-'+(i+1)+' '+(me?'me':'')+'"><td>'+(M[i]||i+1)+'</td><td><strong>'+x.name+'</strong></td><td style="color:var(--gold);font-weight:800">'+x.pts+'</td><td>'+(x.accuracy||0)+'%</td><td>'+(x.timer_sec||'?')+'s</td><td style="color:var(--muted)">'+f+'</td></tr>';
+        return '<tr class="rank-'+(i+1)+' '+(me?'me':'')+'"><td>'+(M[i]||i+1)+'</td><td><strong>'+x.name+'</strong></td><td style="color:var(--gold);font-weight:800">'+x.pts+'</td><td style="color:var(--accent2);font-size:0.78rem;">'+(x.total||'?')+' MDAs</td><td>'+(x.accuracy||0)+'%</td><td>'+(x.timer_sec||'?')+'s</td><td style="color:var(--muted)">'+f+'</td></tr>';
       }).join('')+'</tbody></table>';
   }catch(e){body.innerHTML='<div class="no-data">Error: '+e.message+'</div>';}
 }
@@ -707,7 +877,7 @@ async function loadRanking(){
   const body=document.getElementById('ranking-lb-body');if(!body)return;
   body.innerHTML='<div class="loading">Cargando...</div>';
   try{
-    const r=await sbFetch('/rest/v1/scores?order=pts.desc&limit=500');
+    const r=await sbFetch('/rest/v1/scores?season=eq.current&completed=eq.true&order=pts.desc&limit=500');
     if(!r.ok){const e=await r.text();body.innerHTML='<div class="no-data">Error '+r.status+': '+e+'</div>';return;}
     const s=await r.json();
     if(!s.length){body.innerHTML='<div class="no-data">Sin puntajes aun!</div>';return;}
@@ -716,32 +886,155 @@ async function loadRanking(){
     s.forEach(x=>{if(!best[x.name]||x.pts>best[x.name].pts)best[x.name]=x;});
     const top=Object.values(best).sort((a,b)=>b.pts-a.pts).slice(0,100);
     const M=['&#129351;','&#129352;','&#129353;'];
-    body.innerHTML='<table><thead><tr><th>#</th><th>Nombre</th><th>Mejor puntaje</th><th>Prec.</th><th>Seg.</th><th>Fecha</th></tr></thead><tbody>'+
+    body.innerHTML='<table><thead><tr><th>#</th><th>Nombre</th><th>Mejor puntaje</th><th>Preguntas</th><th>Prec.</th><th>Seg.</th><th>Fecha</th></tr></thead><tbody>'+
       top.map((x,i)=>{const f=new Date(x.created_at).toLocaleDateString('es-CL');
-        return '<tr class="rank-'+(i+1)+'"><td>'+(M[i]||i+1)+'</td><td><strong>'+x.name+'</strong></td><td style="color:var(--gold);font-weight:800">'+x.pts+'</td><td>'+(x.accuracy||0)+'%</td><td>'+(x.timer_sec||'?')+'s</td><td style="color:var(--muted)">'+f+'</td></tr>';
+        return '<tr class="rank-'+(i+1)+'"><td>'+(M[i]||i+1)+'</td><td><strong>'+x.name+'</strong></td><td style="color:var(--gold);font-weight:800">'+x.pts+'</td><td style="color:var(--accent2);font-size:0.78rem;">'+(x.total||'?')+' MDAs</td><td>'+(x.accuracy||0)+'%</td><td>'+(x.timer_sec||'?')+'s</td><td style="color:var(--muted)">'+f+'</td></tr>';
       }).join('')+'</tbody></table>';
   }catch(e){body.innerHTML='<div class="no-data">Error: '+e.message+'</div>';}
 }
 
 /* ── PRIZE ── */
-async function loadPrizeText(){
-  try{const r=await sbGet('/rest/v1/announcements?id=eq.1');const t=r[0]?.text||'';renderPrizeBanner(t);const pi=document.getElementById('prize-input');if(pi)pi.value=t;}catch(e){}
+/* ── RESET CONFIG ── */
+let resetConfig = {prize:'', resetDate:''};
+
+async function loadResetConfig(){
+  try{
+    const rows = await sbGet('/rest/v1/settings?key=eq.prize');
+    resetConfig.prize = rows[0]?.value || '';
+    const pi=document.getElementById('prize-input'); if(pi) pi.value=resetConfig.prize;
+  }catch(e){console.error('loadResetConfig:',e);}
 }
-function renderPrizeBanner(text){
+
+function updatePrizePreview(){
+  const prev = document.getElementById('prize-preview');
+  if(!prev) return;
+  if(resetConfig.prize && resetConfig.resetDate){
+    prev.innerHTML = '&#128161; Se mostrar&#225; en Ranking: <strong style="color:var(--accent2)">"El mejor puntaje antes del '+resetConfig.resetDate+' a las 23:59 ganar&#225; '+resetConfig.prize+'"</strong>';
+  } else {
+    prev.textContent = 'Completa el premio y la fecha para ver la vista previa.';
+  }
+}
+
+function renderPrizeBanner(){
   const w=document.getElementById('prize-banner-wrap');if(!w)return;
-  w.innerHTML=text&&text.trim()?'<div class="prize-banner"><div class="prize-icon">&#127873;</div><div class="prize-text">'+text.replace(/\n/g,'<br>')+'</div></div>':'';
+  if(resetConfig.prize && resetConfig.resetDate){
+    const msg = 'El mejor puntaje antes del '+resetConfig.resetDate+' a las 23:59 ganar&#225; '+resetConfig.prize;
+    w.innerHTML='<div class="prize-banner"><div class="prize-icon">&#127873;</div><div class="prize-text">'+msg+'</div></div>';
+  } else if(resetConfig.prize){
+    w.innerHTML='<div class="prize-banner"><div class="prize-icon">&#127873;</div><div class="prize-text">Premio: '+resetConfig.prize+'</div></div>';
+  } else {
+    w.innerHTML='';
+  }
 }
-async function savePrizeText(){
-  const text=document.getElementById('prize-input')?.value.trim()||'';
-  try{await sbFetch('/rest/v1/announcements',{method:'POST',headers:{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify({id:1,text})});renderPrizeBanner(text);alert('Guardado.');}
-  catch(e){alert('Error al guardar.');}
+
+async function saveResetConfig(){
+  const prize = document.getElementById('prize-input')?.value.trim()||'';
+  const resetDate = document.getElementById('reset-date-input')?.value.trim()||'';
+  resetConfig.prize = prize;
+  resetConfig.resetDate = resetDate;
+  try{
+    await Promise.all([
+      sbFetch('/rest/v1/settings',{method:'POST',headers:{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify({key:'prize',value:prize})}),
+      sbFetch('/rest/v1/settings',{method:'POST',headers:{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify({key:'reset_date',value:resetDate})})
+    ]);
+    updatePrizePreview();
+    renderPrizeBanner();
+    alert('Guardado.');
+  }catch(e){alert('Error: '+e.message);}
+}
+
+async function checkAutoReset(){
+  if(!resetConfig.resetDate) return;
+  const parts = resetConfig.resetDate.split('/');
+  if(parts.length!==3) return;
+  const resetMoment = new Date(parts[2], parts[1]-1, parts[0], 23, 59, 59);
+  const now = new Date();
+  if(now < resetMoment) return;
+  // Check in SUPABASE (not localStorage) if this date was already processed
+  try{
+    const done = await sbGet('/rest/v1/settings?key=eq.last_reset_done');
+    const lastDone = done[0]?.value || '';
+    if(lastDone === resetConfig.resetDate) return; // already processed across all devices
+  }catch(e){ console.error('checkAutoReset:',e); return; }
+  await executeAutoReset();
+}
+
+async function executeAutoReset(){
+  try{
+    const resetDateUsed = resetConfig.resetDate;
+    const prizeUsed = resetConfig.prize || '';
+    const scores = await sbGet('/rest/v1/scores?season=eq.current&completed=eq.true&order=pts.desc&limit=500');
+    const seasonLabel = resetDateUsed.replace(/\//g,'-');
+    if(scores.length){
+      const best={};
+      scores.forEach(x=>{if(!best[x.name]||x.pts>best[x.name].pts)best[x.name]=x;});
+      const EXCLUDED=['obrist'];
+      const ranked = Object.values(best).filter(x=>!EXCLUDED.includes(x.name.toLowerCase().trim())).sort((a,b)=>b.pts-a.pts);
+      if(ranked.length){
+        const winner = ranked[0];
+        const histRow = {period_label:resetDateUsed,reset_date:resetDateUsed,rank:1,player_name:winner.name,pts:winner.pts,accuracy:winner.accuracy||0,timer_sec:winner.timer_sec||5,prize:prizeUsed};
+        const r = await sbPost('/rest/v1/winners_history', histRow);
+        if(!r.ok){const e=await r.text();console.error('Failed to save history:',e);alert('ERROR: No se pudo guardar el historial. Reset cancelado, datos intactos.');return;}
+      }
+    }
+    await sbFetch('/rest/v1/scores?season=eq.current',{method:'PATCH',headers:{'Content-Type':'application/json','apikey':KEY,'Authorization':'Bearer '+KEY},body:JSON.stringify({season:seasonLabel})});
+    await sbFetch('/rest/v1/quiz_answers?season=eq.current',{method:'PATCH',headers:{'Content-Type':'application/json','apikey':KEY,'Authorization':'Bearer '+KEY},body:JSON.stringify({season:seasonLabel})});
+    await sbFetch('/rest/v1/settings',{method:'POST',headers:{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify({key:'last_reset_done',value:resetDateUsed})});
+    await sbFetch('/rest/v1/settings',{method:'POST',headers:{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify({key:'reset_date',value:''})});
+    resetConfig.resetDate='';
+    console.log('Season archived as', seasonLabel);
+  }catch(e){console.error('executeAutoReset failed:',e);alert('Error en reset: '+e.message+'. Los datos NO fueron borrados.');}
+}
+
+async function loadWinnersHistory(){
+  const body = document.getElementById('winners-history-body');
+  if(!body) return;
+  try{
+    const rows = await sbGet('/rest/v1/winners_history?order=id.desc&limit=200');
+    if(!rows.length){body.innerHTML='<div class="no-data">Sin historial a\u00fan.</div>';return;}
+    const winners = rows.filter(r=>r.rank===1);
+    if(!winners.length){body.innerHTML='<div class="no-data">Sin ganadores registrados.</div>';return;}
+    body.innerHTML = winners.map((w,i)=>{
+      const prize = w.prize ? ' y gan\u00f3 <span style="color:var(--green);font-weight:700;">'+w.prize+'</span>' : '';
+      const sid = 'wseason-'+i;
+      const seasonKey = w.reset_date.replace(/\//g,'-');
+      return '<div style="border-bottom:1px solid var(--border);">'+
+        '<div class="winner-row" onclick="toggleWinnerSeason(\''+sid+'\',\''+seasonKey+'\')" style="cursor:pointer;">'+
+          '\u{1F3C6} El d\u00eda <strong>'+w.reset_date+'</strong>, '+
+          '<strong style="color:var(--accent2)">'+w.player_name+'</strong> obtuvo '+
+          '<strong>'+w.pts+' pts</strong>'+prize+
+          '<span style="float:right;color:var(--muted);font-size:0.75rem;">\u25BC ver ranking</span>'+
+          '<div class="winner-date">Precisi\u00f3n: '+w.accuracy+'%</div>'+
+        '</div>'+
+        '<div id="'+sid+'" style="display:none;"><div class="loading">Cargando...</div></div>'+
+      '</div>';
+    }).join('');
+  }catch(e){body.innerHTML='<div class="no-data">Error: '+e.message+'</div>';}
+}
+
+async function toggleWinnerSeason(sid, seasonLabel){
+  const wrap = document.getElementById(sid);
+  if(!wrap) return;
+  if(wrap.style.display!=='none'){ wrap.style.display='none'; return; }
+  wrap.style.display='';
+  try{
+    const scores = await sbGet('/rest/v1/scores?season=eq.'+encodeURIComponent(seasonLabel)+'&completed=eq.true&order=pts.desc&limit=500');
+    if(!scores.length){ wrap.innerHTML='<div class="no-data" style="padding:14px;">Sin datos detallados.</div>'; return; }
+    const best={};
+    scores.forEach(x=>{if(!best[x.name]||x.pts>best[x.name].pts)best[x.name]=x;});
+    const top=Object.values(best).sort((a,b)=>b.pts-a.pts);
+    const M=['\u{1F947}','\u{1F948}','\u{1F949}'];
+    wrap.innerHTML='<table style="width:100%"><thead><tr><th>#</th><th>Jugador</th><th>Puntaje</th><th>Preguntas</th><th>Prec.</th><th>Seg.</th></tr></thead><tbody>'+
+      top.map((x,i)=>'<tr><td>'+(M[i]||i+1)+'</td><td><strong>'+x.name+'</strong></td><td style="color:var(--gold);font-weight:800">'+x.pts+'</td><td style="color:var(--accent2);font-size:0.78rem;">'+(x.total||'?')+' MDAs</td><td>'+(x.accuracy||0)+'%</td><td>'+(x.timer_sec||'?')+'s</td></tr>').join('')+
+      '</tbody></table>';
+  }catch(e){ wrap.innerHTML='<div class="no-data" style="padding:14px;">Error: '+e.message+'</div>'; }
 }
 
 /* ── ADMIN ── */
 async function adminLogin(){
-  if(adminUnlocked){goTo('admin');renderAdmin();loadStats();loadPrizeText();return;}
+  if(adminUnlocked){goTo('admin');renderAdmin();loadStats();loadResetConfig();loadSeasonList();loadMaxPts();loadCompetition();return;}
   const input=prompt('Clave:');if(!input)return;
-  if(input.trim()===getClaveHora()){adminUnlocked=true;goTo('admin');renderAdmin();loadStats();loadPrizeText();}
+  if(input.trim()===getClaveHora()){adminUnlocked=true;goTo('admin');renderAdmin();loadStats();loadResetConfig();loadSeasonList();loadMaxPts();loadCompetition();}
   else alert('Clave incorrecta.');
 }
 function renderAdmin(){
@@ -911,11 +1204,42 @@ function resetPhotos(){
 /* ── STATS ── */
 async function loadStats(){
   ['stats-global','stats-players','stats-machines-acc','stats-speed','stats-activity'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<div class="loading">Cargando...</div>';});
-  const [scores,answers]=await Promise.all([sbGet('/rest/v1/scores?order=pts.desc&limit=1000'),sbGet('/rest/v1/quiz_answers?order=created_at.desc&limit=5000')]);
+  const [allScores,answers]=await Promise.all([
+    sbGet('/rest/v1/scores?season=eq.current&order=pts.desc&limit=1000'),
+    sbGet('/rest/v1/quiz_answers?season=eq.current&order=created_at.desc&limit=5000')
+  ]);
+  const scores = allScores.filter(s=>s.completed!==false); // valid games only
+  const incomplete = allScores.filter(s=>s.completed===false);
   const sg=document.getElementById('stats-global');
-  if(sg){const tg=scores.length,ta=answers.length,tok=answers.filter(a=>a.correct).length,ga=ta?Math.round(tok/ta*100):0,best=scores.length?Math.max(...scores.map(s=>s.pts)):0,pl=[...new Set(scores.map(s=>s.name))].length;sg.innerHTML=sc(tg,'Partidas','purple')+sc(pl,'Jugadores','blue')+sc(ga+'%','Precision global','green')+sc(best,'Mejor puntaje','gold');}
+  if(sg){const tg=scores.length,ti=incomplete.length,ta=answers.length,tok=answers.filter(a=>a.correct).length,ga=ta?Math.round(tok/ta*100):0,best=scores.length?Math.max(...scores.map(s=>s.pts)):0,pl=[...new Set(scores.map(s=>s.name))].length;sg.innerHTML=sc(tg,'Partidas completas','purple')+sc(ti,'Incompletas','red')+sc(pl,'Jugadores','blue')+sc(ga+'%','Precision global','green')+sc(best,'Mejor puntaje','gold');}
   const sp=document.getElementById('stats-players');
-  if(sp){const pm={};scores.forEach(s=>{if(!pm[s.name])pm[s.name]={name:s.name,games:0,best:0,accSum:0,last10:[]};const p=pm[s.name];p.games++;if(s.pts>p.best)p.best=s.pts;p.accSum+=s.accuracy||0;p.last10.unshift(s);});const pa=Object.values(pm).sort((a,b)=>b.best-a.best);sp.innerHTML=pa.length?'<table><thead><tr><th>#</th><th>Jugador</th><th>Partidas</th><th>Mejor</th><th>Prec.prom.</th><th>Ultimos 10</th></tr></thead><tbody>'+pa.map((p,i)=>{const avg=Math.round(p.accSum/p.games);const last=p.last10.slice(0,10).map(s=>'<span class="pill '+(s.accuracy>=70?'g':s.accuracy>=40?'y':'r')+'" title="'+new Date(s.created_at).toLocaleDateString('es-CL')+'">'+s.pts+'</span>').join(' ');return '<tr><td>'+(i+1)+'</td><td><strong>'+p.name+'</strong></td><td>'+p.games+'</td><td style="color:var(--gold);font-weight:800">'+p.best+'</td><td>'+avg+'%<div class="acc-bar"><div class="acc-fill" style="width:'+avg+'%;background:'+(avg>=70?'var(--green)':avg>=40?'var(--gold)':'var(--red)')+'"></div></div></td><td>'+last+'</td></tr>';}).join('')+'</tbody></table>':'<div class="no-data">Sin datos.</div>';}
+  if(sp){
+    const pm={};
+    allScores.forEach(s=>{
+      if(!pm[s.name])pm[s.name]={name:s.name,complete:0,incomplete:0,best:0,accSum:0,last10:[]};
+      const p=pm[s.name];
+      if(s.completed===false){p.incomplete++;}
+      else{p.complete++;if(s.pts>p.best)p.best=s.pts;p.accSum+=s.accuracy||0;p.last10.push(s);}
+    });
+    const pa=Object.values(pm).sort((a,b)=>b.best-a.best);
+    if(!pa.length){sp.innerHTML='<div class="no-data">Sin datos.</div>';}
+    else{
+      sp.innerHTML='<table><thead><tr><th>#</th><th>Jugador</th>'+
+        '<th style="color:var(--green)">Completas</th>'+
+        '<th style="color:var(--red)">Incompletas</th>'+
+        '<th>Mejor</th><th>Prec.prom.</th><th>Ultimos 10</th></tr></thead><tbody>'+
+        pa.map((p,i)=>{
+          const avg=p.complete>0?Math.round(p.accSum/p.complete):0;
+          const last=p.last10.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,10).map(s=>{const d=new Date(s.created_at);const fecha=d.toLocaleDateString('es-CL');const hora=d.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});return '<span class="pill '+(s.accuracy>=70?'g':s.accuracy>=40?'y':'r')+'" title="'+fecha+' '+hora+'" style="display:inline-flex;flex-direction:column;align-items:center;padding:3px 7px;">'+'<span style="font-size:0.72rem;font-weight:800;">'+s.pts+'</span>'+'<span style="font-size:0.55rem;opacity:0.8;">'+fecha+'</span>'+'<span style="font-size:0.55rem;opacity:0.7;">'+hora+'</span>'+'</span>';}).join(' ');
+          return '<tr><td>'+(i+1)+'</td><td><strong>'+p.name+'</strong></td>'+
+            '<td style="color:var(--green);font-weight:700">'+p.complete+'</td>'+
+            '<td style="color:var(--red);opacity:0.8">'+p.incomplete+'</td>'+
+            '<td style="color:var(--gold);font-weight:800">'+p.best+'</td>'+
+            '<td>'+avg+'%<div class="acc-bar"><div class="acc-fill" style="width:'+avg+'%;background:'+(avg>=70?'var(--green)':avg>=40?'var(--gold)':'var(--red)')+'"></div></div></td>'+
+            '<td>'+last+'</td></tr>';
+        }).join('')+'</tbody></table>';
+    }
+  }
   const sm=document.getElementById('stats-machines-acc');
   if(sm){const ma={};answers.forEach(a=>{if(!ma[a.machine_name])ma[a.machine_name]={name:a.machine_name,ok:0,total:0};ma[a.machine_name].total++;if(a.correct)ma[a.machine_name].ok++;});const marr=Object.values(ma).sort((a,b)=>(a.ok/a.total)-(b.ok/b.total));sm.innerHTML=marr.length?'<table><thead><tr><th>Modelo</th><th>Veces</th><th>Aciertos</th><th>Errores</th><th>Tasa</th></tr></thead><tbody>'+marr.map(m=>{const acc=Math.round(m.ok/m.total*100);const col=acc>=70?'var(--green)':acc>=40?'var(--gold)':'var(--red)';return '<tr><td><strong>'+m.name+'</strong></td><td>'+m.total+'</td><td style="color:var(--green)">'+m.ok+'</td><td style="color:var(--red)">'+(m.total-m.ok)+'</td><td>'+acc+'%<div class="acc-bar"><div class="acc-fill" style="width:'+acc+'%;background:'+col+'"></div></div></td></tr>';}).join('')+'</tbody></table>':'<div class="no-data">Sin datos.</div>';}
   const ss=document.getElementById('stats-speed');
@@ -930,8 +1254,400 @@ function closeModal(id){document.getElementById(id).classList.remove('open');}
 
 /* ── INIT ── */
 // First add photo_url columns if they don't exist - handled by SQL below
+
+
+function toggleSection(wrapId, btnId){
+  const wrap = document.getElementById(wrapId);
+  const btn = document.getElementById(btnId);
+  if(!wrap||!btn) return;
+  if(wrap.style.display==='none'){
+    wrap.style.display='';
+    btn.innerHTML='&#9650; ocultar';
+  } else {
+    wrap.style.display='none';
+    btn.innerHTML='&#9660; mostrar';
+  }
+}
+function toggleModels(){
+  const wrap = document.getElementById('admin-list-wrap');
+  const btn = document.getElementById('models-toggle');
+  const toolbar = document.getElementById('admin-toolbar-wrap');
+  if(wrap.style.display==='none'){
+    wrap.style.display='';
+    toolbar.style.display='';
+    btn.innerHTML='&#9650; ocultar';
+  } else {
+    wrap.style.display='none';
+    toolbar.style.display='none';
+    btn.innerHTML='&#9660; mostrar';
+  }
+}
+
+/* ── SCORES MANAGEMENT ── */
+let allScoresMgmt = [];
+let editingScoreId = null;
+
+async function loadScoresMgmt(){
+  const list = document.getElementById('scores-mgmt-list');
+  if(!list) return;
+  list.innerHTML = '<div class="loading">Cargando...</div>';
+  try{
+    allScoresMgmt = await sbGet('/rest/v1/scores?season=eq.current&order=pts.desc&limit=500');
+    renderScoresMgmt();
+  }catch(e){ list.innerHTML = '<div class="no-data">Error: '+e.message+'</div>'; }
+}
+
+function renderScoresMgmt(){
+  const list=document.getElementById('scores-mgmt-list');
+  if(!list)return;
+  const q=(document.getElementById('scores-search')?.value||'').toLowerCase();
+  const filtered=allScoresMgmt.filter(s=>s.name.toLowerCase().includes(q));
+  if(!filtered.length){list.innerHTML='<div class="no-data">Sin resultados.</div>';return;}
+  const grouped={};
+  filtered.forEach(s=>{
+    if(!grouped[s.name])grouped[s.name]={name:s.name,scores:[]};
+    grouped[s.name].scores.push(s);
+  });
+  const sorted=Object.values(grouped).sort((a,b)=>Math.max(...b.scores.map(s=>s.pts))-Math.max(...a.scores.map(s=>s.pts)));
+  let out='';
+  sorted.forEach((g,gi)=>{
+    const best=Math.max(...g.scores.map(s=>s.pts));
+    const complete=g.scores.filter(s=>s.completed!==false).length;
+    const incomplete=g.scores.filter(s=>s.completed===false).length;
+    let rows='';
+    g.scores.forEach(s=>{
+      const f=new Date(s.created_at).toLocaleDateString('es-CL');
+      const h=new Date(s.created_at).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+      const estado=s.completed===false?'<span style="color:var(--red);font-size:0.68rem;">incompleta</span>':'<span style="color:var(--green);font-size:0.68rem;">completa</span>';
+      rows+='<tr>'+
+        '<td style="padding-left:20px;color:var(--gold);font-weight:800;">'+s.pts+'</td>'+
+        '<td>'+(s.accuracy||0)+'%</td>'+
+        '<td>'+(s.timer_sec||'?')+'s</td>'+
+        '<td>'+estado+'</td>'+
+        '<td style="color:var(--muted);font-size:0.72rem;">'+f+' '+h+'</td>'+
+        '<td><div style="display:flex;gap:4px;">'+
+          '<button class="btn btn-secondary btn-sm" onclick="openEditScore('+s.id+')">&#9998;</button>'+
+          '<button class="btn btn-danger btn-sm" onclick="deleteScore('+s.id+')">&#128465;</button>'+
+        '</div></td></tr>';
+    });
+    out+='<div style="border-bottom:1px solid var(--border);">'+
+      '<div class="player-header" onclick="togglePlayerScores('+gi+')">'+
+        '<div style="display:flex;align-items:center;gap:12px;">'+
+          '<span style="font-weight:800;font-size:0.88rem;">'+g.name+'</span>'+
+          '<span style="color:var(--gold);font-size:0.8rem;font-weight:700;">'+best+' pts</span>'+
+          '<span style="color:var(--green);font-size:0.72rem;">'+complete+' OK</span>'+
+          (incomplete>0?'<span style="color:var(--red);font-size:0.72rem;">'+incomplete+' inc.</span>':'')+
+        '</div>'+
+        '<span id="toggle-player-'+gi+'" style="color:var(--muted);font-size:0.75rem;">&#9660;</span>'+
+      '</div>'+
+      '<div id="player-scores-'+gi+'" style="display:none;">'+
+        '<table style="width:100%"><thead><tr>'+
+          '<th>Puntaje</th><th>Prec.</th><th>Seg.</th><th>Estado</th><th>Fecha</th><th></th>'+
+        '</tr></thead><tbody>'+rows+'</tbody></table>'+
+      '</div>'+
+    '</div>';
+  });
+  list.innerHTML=out;
+}
+
+function togglePlayerScores(gi){
+  const wrap=document.getElementById('player-scores-'+gi);
+  const btn=document.getElementById('toggle-player-'+gi);
+  if(!wrap||!btn)return;
+  if(wrap.style.display==='none'){wrap.style.display='';btn.innerHTML='&#9650;';}
+  else{wrap.style.display='none';btn.innerHTML='&#9660;';}
+}
+
+
+
+function openEditScore(id){
+  const s = allScoresMgmt.find(x=>x.id===id);
+  if(!s) return;
+  editingScoreId = id;
+  const mt=document.getElementById('modal-score-title');if(mt)mt.textContent='Editar: '+s.name;
+  document.getElementById('score-name').value = s.name;
+  document.getElementById('score-pts').value = s.pts;
+  document.getElementById('score-acc').value = s.accuracy||0;
+  document.getElementById('score-sec').value = s.timer_sec||5;
+  openModal('modal-score');
+}
+
+async function saveScore_mgmt(){
+  const name = document.getElementById('score-name')?.value.trim();
+  const pts = parseInt(document.getElementById('score-pts')?.value)||0;
+  const accuracy = parseInt(document.getElementById('score-acc')?.value)||0;
+  const timer_sec = parseInt(document.getElementById('score-sec')?.value)||5;
+  if(!name || editingScoreId===null) return;
+  try{
+    const r=await sbPatch('/rest/v1/scores?id=eq.'+editingScoreId,{name,pts,accuracy,timer_sec});
+    if(!r.ok){const e=await r.text();alert('Error '+r.status+': '+e);return;}
+    closeModal('modal-score');
+    await loadScoresMgmt();
+  }catch(e){alert('Error: '+e.message);}
+}
+
+async function deleteScore(id){
+  const s = allScoresMgmt.find(x=>x.id===id);
+  if(!confirm('Eliminar puntaje de "'+s?.name+'" ('+s?.pts+' pts)?')) return;
+  try{
+    await sbDelete('/rest/v1/scores?id=eq.'+id);
+    await loadScoresMgmt();
+  }catch(e){ alert('Error: '+e.message); }
+}
+
+/* ── SEASONS HISTORY ── */
+async function loadSeasonList(){
+  try{
+    const rows=await sbGet('/rest/v1/scores?select=season&order=season.asc');
+    const seasons=[...new Set(rows.map(r=>r.season).filter(s=>s&&s!=='current'))];
+    const sel=document.getElementById('season-select');
+    if(!sel)return;
+    sel.innerHTML='<option value="">-- Seleccionar per\u00EDodo --</option>';
+    if(!seasons.length){sel.innerHTML='<option value="">Sin per\u00EDodos archivados</option>';return;}
+    seasons.reverse().forEach(s=>{
+      const opt=document.createElement('option');
+      opt.value=s;opt.textContent=(s==='temporada_1'?'Período inicial':s);
+      sel.appendChild(opt);
+    });
+  }catch(e){console.error('loadSeasonList:',e);}
+}
+
+async function loadSeasonData(){
+  const season=document.getElementById('season-select')?.value;
+  const body=document.getElementById('season-data');
+  if(!season){body.innerHTML='<div class="no-data">Selecciona un per\u00EDodo.</div>';return;}
+  body.innerHTML='<div class="loading">Cargando...</div>';
+  try{
+    const scores=await sbGet('/rest/v1/scores?season=eq.'+encodeURIComponent(season)+'&order=pts.desc&limit=500');
+    if(!scores.length){body.innerHTML='<div class="no-data">Sin datos.</div>';return;}
+    const best={};
+    scores.filter(s=>s.completed!==false).forEach(x=>{if(!best[x.name]||x.pts>best[x.name].pts)best[x.name]=x;});
+    const top=Object.values(best).sort((a,b)=>b.pts-a.pts);
+    const complete=scores.filter(s=>s.completed!==false).length;
+    const incomplete=scores.filter(s=>s.completed===false).length;
+    const M=['\u{1F947}','\u{1F948}','\u{1F949}'];
+    body.innerHTML=
+      '<div style="padding:10px 16px;display:flex;gap:16px;font-size:0.78rem;color:var(--muted);border-bottom:1px solid var(--border);">'+
+        '<span>Completas: <strong style="color:var(--green)">'+complete+'</strong></span>'+
+        '<span>Incompletas: <strong style="color:var(--red)">'+incomplete+'</strong></span>'+
+        '<span>Jugadores: <strong style="color:var(--accent2)">'+Object.keys(best).length+'</strong></span>'+
+      '</div>'+
+      '<table><thead><tr><th>#</th><th>Jugador</th><th>Mejor puntaje</th><th>Preguntas</th><th>Prec.</th><th>Seg.</th><th>Fecha</th></tr></thead><tbody>'+
+      top.map((x,i)=>{
+        const f=new Date(x.created_at).toLocaleDateString('es-CL');
+        return '<tr class="rank-'+(i+1)+'">'+
+          '<td>'+(M[i]||i+1)+'</td>'+
+          '<td><strong>'+x.name+'</strong></td>'+
+          '<td style="color:var(--gold);font-weight:800">'+x.pts+'</td>'+
+          '<td style="color:var(--accent2);font-size:0.78rem;">'+(x.total||'?')+' MDAs</td>'+
+          '<td>'+(x.accuracy||0)+'%</td>'+
+          '<td>'+(x.timer_sec||'?')+'s</td>'+
+          '<td style="color:var(--muted)">'+f+'</td></tr>';
+      }).join('')+'</tbody></table>';
+  }catch(e){body.innerHTML='<div class="no-data">Error: '+e.message+'</div>';}
+}
+
+/* ── MAX PTS CONFIG ── */
+let maxPtsConfig = {5: 1000, 10: 1200, 20: 1300};
+
+async function loadMaxPts(){
+  try{
+    const rows = await sbGet('/rest/v1/settings?key=in.(max_pts_5,max_pts_10,max_pts_20)');
+    rows.forEach(r=>{
+      const q = parseInt(r.key.replace('max_pts_',''));
+      maxPtsConfig[q] = parseInt(r.value)||maxPtsConfig[q];
+    });
+    [5,10,20].forEach(q=>{
+      const el=document.getElementById('max-pts-'+q);
+      if(el) el.value=maxPtsConfig[q];
+    });
+    updateChipLabels();
+  }catch(e){console.error('loadMaxPts:',e);}
+}
+
+async function saveMaxPts(){
+  const vals = {
+    5: parseInt(document.getElementById('max-pts-5')?.value)||1000,
+    10: parseInt(document.getElementById('max-pts-10')?.value)||1200,
+    20: parseInt(document.getElementById('max-pts-20')?.value)||1300
+  };
+  try{
+    await Promise.all([5,10,20].map(q=>
+      sbFetch('/rest/v1/settings',{method:'POST',headers:{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify({key:'max_pts_'+q,value:String(vals[q])})})
+    ));
+    maxPtsConfig = vals;
+    updateChipLabels();
+    alert('Guardado.');
+  }catch(e){alert('Error: '+e.message);}
+}
+
+function updateChipLabels(){
+  document.querySelectorAll('.chips .chip').forEach(c=>{
+    const fn = c.getAttribute('onclick')||'';
+    if(fn.includes("'q',5"))  c.innerHTML='5 <span style="font-size:0.65rem;opacity:0.8;">(max '+maxPtsConfig[5]+')</span>';
+    if(fn.includes("'q',10")) c.innerHTML='10 <span style="font-size:0.65rem;opacity:0.8;">(max '+maxPtsConfig[10]+')</span>';
+    if(fn.includes("'q',20")) c.innerHTML='20 <span style="font-size:0.65rem;opacity:0.8;">(max '+maxPtsConfig[20]+')</span>';
+  });
+}
+
+/* \u2500\u2500 COMPETITION SYSTEM \u2500\u2500 */
+let compState = {active:false, endTime:null, prize:''};
+let compCountdownInt = null;
+
+async function loadCompetition(){
+  try{
+    const rows = await sbGet('/rest/v1/settings?key=in.(competition_active,competition_end,prize)');
+    let active=false, endStr='', prize='';
+    rows.forEach(r=>{
+      if(r.key==='competition_active') active = r.value==='true';
+      if(r.key==='competition_end') endStr = r.value||'';
+      if(r.key==='prize') prize = r.value||'';
+    });
+    compState.active = active;
+    compState.endTime = endStr ? new Date(endStr) : null;
+    compState.prize = prize;
+    // Check if competition expired
+    if(active && compState.endTime && new Date() >= compState.endTime){
+      await finishCompetition();
+      return;
+    }
+    updateCompetitionUI();
+    startCompetitionCountdown();
+  }catch(e){console.error('loadCompetition:',e);}
+}
+
+function updateCompetitionUI(){
+  // Admin badge + buttons
+  const badge=document.getElementById('comp-status-badge');
+  const startBtn=document.getElementById('comp-start-btn');
+  const addBtn=document.getElementById('comp-addtime-btn');
+  const stopBtn=document.getElementById('comp-stop-btn');
+  const info=document.getElementById('comp-info');
+  if(compState.active){
+    if(badge){badge.textContent='ACTIVA';badge.style.background='rgba(16,185,129,0.15)';badge.style.color='var(--green)';}
+    if(startBtn)startBtn.style.display='none';
+    if(addBtn)addBtn.style.display='';
+    if(stopBtn)stopBtn.style.display='';
+    if(info&&compState.endTime)info.innerHTML='Termina: <strong style="color:var(--accent2)">'+compState.endTime.toLocaleString('es-CL')+'</strong>';
+  }else{
+    if(badge){badge.textContent='PR\u00c1CTICA';badge.style.background='rgba(245,158,11,0.15)';badge.style.color='var(--gold)';}
+    if(startBtn)startBtn.style.display='';
+    if(addBtn)addBtn.style.display='none';
+    if(stopBtn)stopBtn.style.display='none';
+    if(info)info.innerHTML='La app est\u00e1 en modo pr\u00e1ctica. Los puntajes no cuentan para el ranking.';
+  }
+  renderCompetitionBanner();
+}
+
+function renderCompetitionBanner(){
+  const w=document.getElementById('prize-banner-wrap');
+  if(!w)return;
+  if(compState.active && compState.endTime){
+    w.innerHTML='<div class="prize-banner"><div class="prize-icon">\u{1F3C6}</div><div class="prize-text">Competencia activa\u2014Premio: '+(compState.prize||'por definir')+'<div id="comp-countdown" style="font-size:1.3rem;font-weight:900;color:var(--accent2);margin-top:6px;"></div></div></div>';
+  }else{
+    w.innerHTML='<div class="prize-banner" style="border-color:var(--gold);"><div class="prize-icon">\u{1F4DA}</div><div class="prize-text" style="color:var(--gold);">Modo pr\u00e1ctica\u2014juega libremente. Los puntajes no cuentan para el ranking.</div></div>';
+  }
+}
+
+function startCompetitionCountdown(){
+  clearInterval(compCountdownInt);
+  if(!compState.active||!compState.endTime)return;
+  const tick=()=>{
+    const el=document.getElementById('comp-countdown');
+    const now=new Date();
+    const diff=compState.endTime-now;
+    if(diff<=0){
+      clearInterval(compCountdownInt);
+      if(el)el.textContent='\u00a1Tiempo terminado!';
+      finishCompetition();
+      return;
+    }
+    const d=Math.floor(diff/86400000);
+    const h=Math.floor((diff%86400000)/3600000);
+    const m=Math.floor((diff%3600000)/60000);
+    const s=Math.floor((diff%60000)/1000);
+    if(el)el.textContent=(d>0?d+'d ':'')+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  };
+  tick();
+  compCountdownInt=setInterval(tick,1000);
+}
+
+async function startCompetition(){
+  const days=parseInt(document.getElementById('comp-days')?.value)||0;
+  const hours=parseInt(document.getElementById('comp-hours')?.value)||0;
+  if(days===0&&hours===0){alert('Define una duraci\u00f3n.');return;}
+  const prize=document.getElementById('prize-input')?.value.trim()||'';
+  const end=new Date(Date.now()+days*86400000+hours*3600000);
+  if(!confirm('Iniciar competencia hasta '+end.toLocaleString('es-CL')+'?'))return;
+  try{
+    await Promise.all([
+      sbFetch('/rest/v1/settings',{method:'POST',headers:{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify({key:'competition_active',value:'true'})}),
+      sbFetch('/rest/v1/settings',{method:'POST',headers:{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify({key:'competition_end',value:end.toISOString()})}),
+      sbFetch('/rest/v1/settings',{method:'POST',headers:{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify({key:'prize',value:prize})})
+    ]);
+    compState={active:true,endTime:end,prize:prize};
+    updateCompetitionUI();
+    startCompetitionCountdown();
+    loadRanking();
+    alert('Competencia iniciada.');
+  }catch(e){alert('Error: '+e.message);}
+}
+
+async function addCompetitionTime(){
+  const days=parseInt(prompt('D\u00edas a agregar:','0'))||0;
+  const hours=parseInt(prompt('Horas a agregar:','0'))||0;
+  if(days===0&&hours===0)return;
+  const newEnd=new Date(compState.endTime.getTime()+days*86400000+hours*3600000);
+  try{
+    await sbFetch('/rest/v1/settings',{method:'POST',headers:{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify({key:'competition_end',value:newEnd.toISOString()})});
+    compState.endTime=newEnd;
+    updateCompetitionUI();
+    startCompetitionCountdown();
+    alert('Tiempo agregado. Nuevo fin: '+newEnd.toLocaleString('es-CL'));
+  }catch(e){alert('Error: '+e.message);}
+}
+
+async function stopCompetition(){
+  if(!confirm('Detener la competencia AHORA? Se guardar\u00e1 el ganador y se archivar\u00e1n los puntajes.'))return;
+  await finishCompetition();
+}
+
+async function finishCompetition(){
+  try{
+    const prize=compState.prize||'';
+    const today=new Date().toLocaleDateString('es-CL').replace(/\//g,'-');
+    const scores=await sbGet('/rest/v1/scores?season=eq.current&completed=eq.true&order=pts.desc&limit=500');
+    if(scores.length){
+      const best={};
+      scores.forEach(x=>{if(!best[x.name]||x.pts>best[x.name].pts)best[x.name]=x;});
+      const EXCLUDED=['obrist'];
+      const ranked=Object.values(best).filter(x=>!EXCLUDED.includes(x.name.toLowerCase().trim())).sort((a,b)=>b.pts-a.pts);
+      if(ranked.length){
+        const winner=ranked[0];
+        const histRow={period_label:today,reset_date:today,rank:1,player_name:winner.name,pts:winner.pts,accuracy:winner.accuracy||0,timer_sec:winner.timer_sec||5,prize:prize};
+        const r=await sbPost('/rest/v1/winners_history',histRow);
+        if(!r.ok){const e=await r.text();console.error('history save failed:',e);alert('ERROR guardando historial. Competencia NO finalizada, datos intactos.');return;}
+      }
+      // Archive competition scores with date label
+      await sbFetch('/rest/v1/scores?season=eq.current',{method:'PATCH',headers:{'Content-Type':'application/json','apikey':KEY,'Authorization':'Bearer '+KEY},body:JSON.stringify({season:today})});
+      await sbFetch('/rest/v1/quiz_answers?season=eq.current',{method:'PATCH',headers:{'Content-Type':'application/json','apikey':KEY,'Authorization':'Bearer '+KEY},body:JSON.stringify({season:today})});
+    }
+    // Set state to practica
+    await Promise.all([
+      sbFetch('/rest/v1/settings',{method:'POST',headers:{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify({key:'competition_active',value:'false'})}),
+      sbFetch('/rest/v1/settings',{method:'POST',headers:{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify({key:'competition_end',value:''})})
+    ]);
+    compState={active:false,endTime:null,prize:prize};
+    clearInterval(compCountdownInt);
+    updateCompetitionUI();
+    loadRanking();loadWinnersHistory();
+    if(adminUnlocked)loadSeasonList();
+  }catch(e){console.error('finishCompetition:',e);alert('Error: '+e.message+'. Datos NO borrados.');}
+}
 loadMachines();
-loadPrizeText();
+loadResetConfig();
+loadCompetition();
+loadMaxPts();
 </script>
 </body>
 </html>
