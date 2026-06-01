@@ -1318,35 +1318,44 @@ function adminTab(tab){
 let allScoresMgmt = [];
 let editingScoreId = null;
 
-async function loadScoresMgmt(){
+async function loadScores(){
   const list=document.getElementById('scores-mgmt-list');
   if(!list)return;
   list.innerHTML='<div class="loading">Cargando...</div>';
   try{
     const s=await sbGet('/rest/v1/scores?order=pts.desc&limit=500');
+    if(!s || !s.length){list.innerHTML='<div class="no-data">No hay puntajes registrados.</div>';return;}
     
-    if(!s || !s.length){ 
-      list.innerHTML='<div class="no-data">No hay puntajes registrados.</div>';
-      return;
-    }
-
     const currentSeason=(compState && compState.active && compState.compId) ? compState.compId : 'practica';
     const filtered=s.filter(x=>x.season===currentSeason);
+    if(!filtered.length){list.innerHTML='<div class="no-data">No hay puntajes en este período.</div>';return;}
 
-    if(!filtered.length){
-      list.innerHTML='<div class="no-data">No hay puntajes en este período.</div>';
-      return;
-    }
-
-    // Corrección: Se añade la columna y el botón para eliminar cada puntaje
+    // Se añade la columna "Acción" y el botón con la papelera
     list.innerHTML='<table><thead><tr><th>Jugador</th><th>Puntaje</th><th>Estado</th><th>Fecha</th><th>Acción</th></tr></thead><tbody>'+
       filtered.map(x=>'<tr><td><strong>'+x.name+'</strong></td><td style="color:var(--accent2);font-weight:800">'+x.pts+'</td><td>'+(x.completed?'&#9989; Fin':'&#9203; Activo')+'</td><td style="color:var(--muted);font-size:0.8rem">'+x.created_at+'</td><td><button class="btn btn-danger btn-sm" onclick="deleteScore('+x.id+')">&#128465;</button></td></tr>').join('')+
       '</tbody></table>';
-  }catch(e){
-    list.innerHTML='<div class="no-data">Error: '+e.message+'</div>';
-  }
+  }catch(e){list.innerHTML='<div class="no-data">Error: '+e.message+'</div>';}
 }
 
+// Pega esta nueva función justo abajo de la anterior
+async function deleteScore(id){
+  if(!confirm('¿Estás seguro de que deseas eliminar este puntaje permanentemente?')) return;
+  try {
+    // Tu archivo utiliza internamente un endpoint mediante sbGet simulando API REST nativa
+    await fetch(SUPABASE_URL + '/rest/v1/scores?id=eq.' + id, {
+      method: 'DELETE',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Content-Type': 'application/json'
+      }
+    });
+    alert('Puntaje eliminado.');
+    loadScores(); // Recarga la pestaña usando el nombre correcto
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
+}
 // Nueva función necesaria para ejecutar la eliminación en Supabase
 async function deleteScore(id){
   if(!confirm('¿Estás seguro de que deseas eliminar este puntaje permanentemente?')) return;
