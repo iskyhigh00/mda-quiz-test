@@ -1319,19 +1319,34 @@ let allScoresMgmt = [];
 let editingScoreId = null;
 
 async function loadScoresMgmt(){
-  const list=document.getElementById('adm-scores-list');
+  const list=document.getElementById('scores-mgmt-list');
   if(!list)return;
   list.innerHTML='<div class="loading">Cargando...</div>';
   try{
-    const currentSeason=(compState.active && compState.compId) ? compState.compId : 'practica';
-    allScoresMgmt=await sbGet('/rest/v1/scores?season=eq.'+encodeURIComponent(currentSeason)+'&order=pts.desc,id.asc&limit=500');
-    if(!allScoresMgmt.length){list.innerHTML='<div class="no-data">Sin registros de puntajes.</div>';return;}
-    list.innerHTML='<table><thead><tr><th>Jugador</th><th>Pts</th><th>Fecha</th><th></th></tr></thead><tbody>'+
-      allScoresMgmt.map(s=>'<tr><td><strong>'+s.name+'</strong></td><td style="color:var(--gold);font-weight:800">'+s.pts+'</td><td style="color:var(--muted);font-size:0.75rem">'+s.created_at.split('T')[0]+'</td><td><button class="btn btn-danger btn-sm" onclick="deleteScore('+s.id+')">&#128465;</button></td></tr>').join('')+
-      '</tbody></table>';
-  }catch(e){list.innerHTML='<div class="no-data">Error: '+e.message+'</div>';}
-}
+    // EL ERROR: Si la tabla 'scores' está vacía o el filtro falla, 's' no devuelve nada
+    const s=await sbGet('/rest/v1/scores?order=pts.desc&limit=500');
+    
+    // CORRECCIÓN: Validar si 's' es null o no tiene elementos antes de usar .filter
+    if(!s || !s.length){ 
+      list.innerHTML='<div class="no-data">No hay puntajes registrados.</div>';
+      return;
+    }
 
+    const currentSeason=(compState && compState.active && compState.compId) ? compState.compId : 'practica';
+    const filtered=s.filter(x=>x.season===currentSeason);
+
+    if(!filtered.length){
+      list.innerHTML='<div class="no-data">No hay puntajes en este período.</div>';
+      return;
+    }
+
+    list.innerHTML='<table><thead><tr><th>Jugador</th><th>Puntaje</th><th>Estado</th><th>Fecha</th><th></th></tr></thead><tbody>'+
+      filtered.map(x=>'<tr><td><strong>'+x.name+'</strong></td><td style="color:var(--accent2);font-weight:800">'+x.pts+'</td><td>'+(x.completed?'&#9989; Fin':'&#9203; Activo')+'</td><td style="color:var(--muted);font-size:0.8rem">'+x.created_at+'</td><td><button class="btn btn-danger btn-sm" onclick="deleteScore('+x.id+')">&#128465;</button></td></tr>').join('')+
+      '</tbody></table>';
+  }catch(e){
+    list.innerHTML='<div class="no-data">Error: '+e.message+'</div>';
+  }
+}
 function renderScoresMgmt(){
   const list=document.getElementById('scores-mgmt-list');
   if(!list)return;
