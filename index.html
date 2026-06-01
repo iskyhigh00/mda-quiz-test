@@ -311,7 +311,7 @@ tbody tr.me td{background:rgba(124,58,237,0.08);}
         <input class="modal-input" id="prize-input" placeholder="Ej: 1 hora libre" style="-webkit-user-select:text;user-select:text;" oninput="resetConfig.prize=this.value;">
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <div style="flex:1;min-width:90px;"><label class="form-label">D\u00edas</label>
+        <div style="flex:1;min-width:90px;"><label class="form-label">D&iacute;as</label>
           <input class="modal-input" id="comp-days" type="number" placeholder="7" min="0" max="365" value="7"></div>
         <div style="flex:1;min-width:90px;"><label class="form-label">Horas</label>
           <input class="modal-input" id="comp-hours" type="number" placeholder="0" min="0" max="23" value="0"></div>
@@ -319,6 +319,7 @@ tbody tr.me td{background:rgba(124,58,237,0.08);}
       <div id="comp-info" style="background:var(--surface);border-radius:9px;padding:10px 14px;font-size:0.82rem;color:var(--muted);"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-primary" id="comp-start-btn" onclick="startCompetition()">&#9654; Iniciar competencia</button>
+        <button class="btn btn-secondary" id="comp-updateprize-btn" onclick="updateCompetitionPrize()" style="display:none;">&#128221; Actualizar premio</button>
         <button class="btn btn-secondary" id="comp-addtime-btn" onclick="addCompetitionTime()" style="display:none;">+ Agregar tiempo</button>
         <button class="btn btn-danger" id="comp-stop-btn" onclick="stopCompetition()" style="display:none;">&#9632; Detener ahora</button>
       </div>
@@ -366,7 +367,18 @@ tbody tr.me td{background:rgba(124,58,237,0.08);}
       <div id="season-data"><div class="no-data" style="padding:20px;">Selecciona un per&#237;odo.</div></div>
     </div>
   </div>
-
+  <div class="section-box" style="margin-bottom:18px;">
+    <div class="section-head" onclick="toggleSection('winners-mgmt-wrap','toggle-winners-mgmt')" style="cursor:pointer;">
+      &#127942; Gestionar ganadores del historial
+      <span id="toggle-winners-mgmt" style="float:right;color:var(--muted);font-size:0.8rem;">&#9660; mostrar</span>
+    </div>
+    <div id="winners-mgmt-wrap" style="display:none;">
+      <div style="padding:10px 16px;border-bottom:1px solid var(--border);">
+        <button class="btn btn-secondary btn-sm" onclick="loadWinnersMgmt()">&#8635; Actualizar</button>
+      </div>
+      <div id="winners-mgmt-list"><div class="loading">Cargando...</div></div>
+    </div>
+  </div>
   <!-- SCORES MANAGEMENT -->
   <div class="section-box" style="margin-bottom:18px;">
     <div class="section-head" onclick="toggleSection('scores-mgmt-wrap','toggle-scores-mgmt'); if(document.getElementById('scores-mgmt-wrap').style.display!=='none') loadScoresMgmt();" style="cursor:pointer;">
@@ -382,9 +394,16 @@ tbody tr.me td{background:rgba(124,58,237,0.08);}
     </div>
   </div>
 
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
     <div style="font-size:0.9rem;font-weight:800;color:var(--accent2);">&#128200; Estad&#237;sticas</div>
-    <button class="refresh-btn" onclick="loadStats()">&#8635; Actualizar</button>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <select id="stats-scope" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:7px 11px;border-radius:8px;font-size:0.8rem;outline:none;cursor:pointer;" onchange="loadStats()">
+        <option value="current">Competencia actual</option>
+        <option value="last3">\u00daltimas 3 temporadas</option>
+        <option value="all">Todos los tiempos</option>
+      </select>
+      <button class="refresh-btn" onclick="loadStats()">&#8635; Actualizar</button>
+    </div>
   </div>
   <div class="stats-grid" id="stats-global"></div>
   <div class="section-box"><div class="section-head" onclick="toggleSection('stats-players-wrap','toggle-players')" style="cursor:pointer;">&#128100; Jugadores <span id="toggle-players" style="float:right;color:var(--muted);font-size:0.8rem;">&#9660; mostrar</span></div><div id="stats-players-wrap" style="display:none"><div id="stats-players"><div class="loading">Cargando...</div></div></div></div>
@@ -1032,9 +1051,9 @@ async function toggleWinnerSeason(sid, seasonLabel){
 
 /* ── ADMIN ── */
 async function adminLogin(){
-  if(adminUnlocked){goTo('admin');renderAdmin();loadStats();loadResetConfig();loadSeasonList();loadMaxPts();loadCompetition();return;}
+  if(adminUnlocked){goTo('admin');renderAdmin();loadStats();loadResetConfig();loadSeasonList();loadMaxPts();loadCompetition();loadWinnersMgmt();return;}
   const input=prompt('Clave:');if(!input)return;
-  if(input.trim()===getClaveHora()){adminUnlocked=true;goTo('admin');renderAdmin();loadStats();loadResetConfig();loadSeasonList();loadMaxPts();loadCompetition();}
+  if(input.trim()===getClaveHora()){adminUnlocked=true;goTo('admin');renderAdmin();loadStats();loadResetConfig();loadSeasonList();loadMaxPts();loadCompetition();loadWinnersMgmt();}
   else alert('Clave incorrecta.');
 }
 function renderAdmin(){
@@ -1204,9 +1223,29 @@ function resetPhotos(){
 /* ── STATS ── */
 async function loadStats(){
   ['stats-global','stats-players','stats-machines-acc','stats-speed','stats-activity'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<div class="loading">Cargando...</div>';});
+    // Determine scope filter
+  const scope = document.getElementById('stats-scope')?.value || 'current';
+  let scoreFilter, answerFilter;
+  if(scope==='current'){
+    scoreFilter='?season=eq.current&order=pts.desc&limit=1000';
+    answerFilter='?season=eq.current&order=created_at.desc&limit=5000';
+  }else if(scope==='all'){
+    scoreFilter='?order=pts.desc&limit=2000';
+    answerFilter='?order=created_at.desc&limit=10000';
+  }else{
+    // last3 — get distinct seasons, pick most recent 3 (excluding current handled below)
+    const seasonRows = await sbGet('/rest/v1/scores?select=season');
+    const seasons = [...new Set(seasonRows.map(r=>r.season).filter(Boolean))];
+    // Sort: 'current' first, then dated ones descending
+    const dated = seasons.filter(s=>s!=='current'&&s!=='practica').sort().reverse().slice(0,3);
+    const wanted = ['current',...dated];
+    const inList = wanted.map(s=>encodeURIComponent(s)).join(',');
+    scoreFilter='?season=in.('+inList+')&order=pts.desc&limit=2000';
+    answerFilter='?season=in.('+inList+')&order=created_at.desc&limit=10000';
+  }
   const [allScores,answers]=await Promise.all([
-    sbGet('/rest/v1/scores?season=eq.current&order=pts.desc&limit=1000'),
-    sbGet('/rest/v1/quiz_answers?season=eq.current&order=created_at.desc&limit=5000')
+    sbGet('/rest/v1/scores'+scoreFilter),
+    sbGet('/rest/v1/quiz_answers'+answerFilter)
   ]);
   const scores = allScores.filter(s=>s.completed!==false); // valid games only
   const incomplete = allScores.filter(s=>s.completed===false);
@@ -1415,35 +1454,34 @@ async function loadSeasonList(){
 async function loadSeasonData(){
   const season=document.getElementById('season-select')?.value;
   const body=document.getElementById('season-data');
-  if(!season){body.innerHTML='<div class="no-data">Selecciona un per\u00EDodo.</div>';return;}
+  if(!season){body.innerHTML='<div class="no-data">Selecciona un per\u00edodo.</div>';return;}
   body.innerHTML='<div class="loading">Cargando...</div>';
   try{
     const scores=await sbGet('/rest/v1/scores?season=eq.'+encodeURIComponent(season)+'&order=pts.desc&limit=500');
     if(!scores.length){body.innerHTML='<div class="no-data">Sin datos.</div>';return;}
+    const completeScores=scores.filter(s=>s.completed!==false);
+    const incompleteScores=scores.filter(s=>s.completed===false);
+    // Players counted from ALL records (anyone who played, complete or not)
+    const allPlayers=[...new Set(scores.map(s=>s.name))];
     const best={};
-    scores.filter(s=>s.completed!==false).forEach(x=>{if(!best[x.name]||x.pts>best[x.name].pts)best[x.name]=x;});
+    completeScores.forEach(x=>{if(!best[x.name]||x.pts>best[x.name].pts)best[x.name]=x;});
     const top=Object.values(best).sort((a,b)=>b.pts-a.pts);
-    const complete=scores.filter(s=>s.completed!==false).length;
-    const incomplete=scores.filter(s=>s.completed===false).length;
     const M=['\u{1F947}','\u{1F948}','\u{1F949}'];
-    body.innerHTML=
-      '<div style="padding:10px 16px;display:flex;gap:16px;font-size:0.78rem;color:var(--muted);border-bottom:1px solid var(--border);">'+
-        '<span>Completas: <strong style="color:var(--green)">'+complete+'</strong></span>'+
-        '<span>Incompletas: <strong style="color:var(--red)">'+incomplete+'</strong></span>'+
-        '<span>Jugadores: <strong style="color:var(--accent2)">'+Object.keys(best).length+'</strong></span>'+
-      '</div>'+
-      '<table><thead><tr><th>#</th><th>Jugador</th><th>Mejor puntaje</th><th>Preguntas</th><th>Prec.</th><th>Seg.</th><th>Fecha</th></tr></thead><tbody>'+
-      top.map((x,i)=>{
-        const f=new Date(x.created_at).toLocaleDateString('es-CL');
-        return '<tr class="rank-'+(i+1)+'">'+
-          '<td>'+(M[i]||i+1)+'</td>'+
-          '<td><strong>'+x.name+'</strong></td>'+
-          '<td style="color:var(--gold);font-weight:800">'+x.pts+'</td>'+
-          '<td style="color:var(--accent2);font-size:0.78rem;">'+(x.total||'?')+' MDAs</td>'+
-          '<td>'+(x.accuracy||0)+'%</td>'+
-          '<td>'+(x.timer_sec||'?')+'s</td>'+
-          '<td style="color:var(--muted)">'+f+'</td></tr>';
-      }).join('')+'</tbody></table>';
+    let html='<div style="padding:10px 16px;display:flex;gap:16px;font-size:0.78rem;color:var(--muted);border-bottom:1px solid var(--border);flex-wrap:wrap;">'+
+      '<span>Partidas completas: <strong style="color:var(--green)">'+completeScores.length+'</strong></span>'+
+      '<span>Incompletas: <strong style="color:var(--red)">'+incompleteScores.length+'</strong></span>'+
+      '<span>Jugadores: <strong style="color:var(--accent2)">'+allPlayers.length+'</strong></span>'+
+    '</div>';
+    if(top.length){
+      html+='<table><thead><tr><th>#</th><th>Jugador</th><th>Mejor puntaje</th><th>Preguntas</th><th>Prec.</th><th>Seg.</th><th>Fecha</th></tr></thead><tbody>'+
+        top.map((x,i)=>{
+          const f=new Date(x.created_at).toLocaleDateString('es-CL');
+          return '<tr class="rank-'+(i+1)+'"><td>'+(M[i]||i+1)+'</td><td><strong>'+x.name+'</strong></td><td style="color:var(--gold);font-weight:800">'+x.pts+'</td><td style="color:var(--accent2);font-size:0.78rem;">'+(x.total||'?')+' MDAs</td><td>'+(x.accuracy||0)+'%</td><td>'+(x.timer_sec||'?')+'s</td><td style="color:var(--muted)">'+f+'</td></tr>';
+        }).join('')+'</tbody></table>';
+    }else{
+      html+='<div class="no-data">Sin partidas completas en este per\u00edodo (solo incompletas).</div>';
+    }
+    body.innerHTML=html;
   }catch(e){body.innerHTML='<div class="no-data">Error: '+e.message+'</div>';}
 }
 
@@ -1528,12 +1566,14 @@ function updateCompetitionUI(){
     if(startBtn)startBtn.style.display='none';
     if(addBtn)addBtn.style.display='';
     if(stopBtn)stopBtn.style.display='';
+    const upBtn=document.getElementById('comp-updateprize-btn');if(upBtn)upBtn.style.display='';
     if(info&&compState.endTime)info.innerHTML='Termina: <strong style="color:var(--accent2)">'+compState.endTime.toLocaleString('es-CL')+'</strong>';
   }else{
     if(badge){badge.textContent='PR\u00c1CTICA';badge.style.background='rgba(245,158,11,0.15)';badge.style.color='var(--gold)';}
     if(startBtn)startBtn.style.display='';
     if(addBtn)addBtn.style.display='none';
     if(stopBtn)stopBtn.style.display='none';
+    const upBtn=document.getElementById('comp-updateprize-btn');if(upBtn)upBtn.style.display='none';
     if(info)info.innerHTML='La app est\u00e1 en modo pr\u00e1ctica. Los puntajes no cuentan para el ranking.';
   }
   renderCompetitionBanner();
@@ -1593,6 +1633,16 @@ async function startCompetition(){
   }catch(e){alert('Error: '+e.message);}
 }
 
+async function updateCompetitionPrize(){
+  const prize=document.getElementById('prize-input')?.value.trim()||'';
+  try{
+    await sbFetch('/rest/v1/settings',{method:'POST',headers:{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify({key:'prize',value:prize})});
+    compState.prize=prize;
+    renderCompetitionBanner();
+    startCompetitionCountdown();
+    alert('Premio actualizado.');
+  }catch(e){alert('Error: '+e.message);}
+}
 async function addCompetitionTime(){
   const days=parseInt(prompt('D\u00edas a agregar:','0'))||0;
   const hours=parseInt(prompt('Horas a agregar:','0'))||0;
@@ -1643,6 +1693,31 @@ async function finishCompetition(){
     loadRanking();loadWinnersHistory();
     if(adminUnlocked)loadSeasonList();
   }catch(e){console.error('finishCompetition:',e);alert('Error: '+e.message+'. Datos NO borrados.');}
+}
+/* \u2500\u2500 WINNERS MGMT \u2500\u2500 */
+let allWinnersMgmt=[];
+async function loadWinnersMgmt(){
+  const list=document.getElementById('winners-mgmt-list');
+  if(!list)return;
+  list.innerHTML='<div class="loading">Cargando...</div>';
+  try{
+    allWinnersMgmt=await sbGet('/rest/v1/winners_history?order=id.desc&limit=200');
+    const winners=allWinnersMgmt.filter(w=>w.rank===1);
+    if(!winners.length){list.innerHTML='<div class="no-data">Sin ganadores.</div>';return;}
+    list.innerHTML='<table><thead><tr><th>Fecha</th><th>Ganador</th><th>Puntaje</th><th>Premio</th><th></th></tr></thead><tbody>'+
+      winners.map(w=>'<tr><td style="color:var(--muted)">'+w.reset_date+'</td><td><strong>'+w.player_name+'</strong></td><td style="color:var(--gold);font-weight:800">'+w.pts+'</td><td style="color:var(--green);font-size:0.78rem;">'+(w.prize||'-')+'</td><td><button class="btn btn-danger btn-sm" onclick="deleteWinner('+w.id+')">&#128465;</button></td></tr>').join('')+
+      '</tbody></table>';
+  }catch(e){list.innerHTML='<div class="no-data">Error: '+e.message+'</div>';}
+}
+async function deleteWinner(id){
+  const w=allWinnersMgmt.find(x=>x.id===id);
+  if(!confirm('Eliminar del historial: '+w?.player_name+' ('+w?.reset_date+')? Esto NO borra los puntajes del per\u00edodo, solo la ficha del ganador.'))return;
+  try{
+    const r=await sbDelete('/rest/v1/winners_history?id=eq.'+id);
+    if(!r.ok&&r.status!==204){const e=await r.text();alert('Error '+r.status+': '+e);return;}
+    await loadWinnersMgmt();
+    loadWinnersHistory();
+  }catch(e){alert('Error: '+e.message);}
 }
 loadMachines();
 loadResetConfig();
