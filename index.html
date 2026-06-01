@@ -206,6 +206,7 @@ tbody tr.me td{background:rgba(124,58,237,0.08);}
 <div id="view-catalog" class="view active">
   <div class="search-row">
     <input class="search-input" id="search" placeholder="Buscar modelo..." oninput="filterCatalog()">
+    <button class="btn btn-primary btn-sm" onclick="openPublicUpload()">+ Subir foto</button>
     <span class="badge" id="cat-count">Cargando...</span>
   </div>
   <div class="grid" id="grid"><div class="loading">Cargando...</div></div>
@@ -323,7 +324,7 @@ tbody tr.me td{background:rgba(124,58,237,0.08);}
         </div>
        <div style="display:flex;gap:10px;flex-wrap:wrap;">
        <div style="flex:1;min-width:90px;"><label class="form-label">D&iacute;as</label>
-         <input class="modal-input" id="comp-days" type="number" placeholder="7" min="0" max="365" value="7"></div>
+         <input class="modal-input" id="comp-days" type="number" placeholder="0" min="0" max="365" value="0"></div>
          <div style="flex:1;min-width:90px;"><label class="form-label">Horas</label>
          <input class="modal-input" id="comp-hours" type="number" placeholder="0" min="0" max="23" value="0"></div>
          <div style="flex:1;min-width:90px;"><label class="form-label">Minutos</label>
@@ -484,6 +485,33 @@ tbody tr.me td{background:rgba(124,58,237,0.08);}
     <button class="btn btn-secondary" style="width:100%;margin-top:8px;" onclick="closeModal('modal-photos')">Cerrar</button>
   </div>
 </div>
+<div id="modal-public-upload" class="modal">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-title">Subir foto al cat&aacute;logo</div>
+    <div class="modal-group">
+      <label class="modal-label">Qui&eacute;n la sube</label>
+      <input class="modal-input" id="public-uploader" placeholder="Tu nombre">
+    </div>
+    <div class="modal-group">
+      <label class="modal-label">Fotos (m&aacute;ximo 3)</label>
+      <div id="public-upload-preview" class="img-preview"><span style="color:var(--muted);font-size:0.8rem;">Sin fotos seleccionadas</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <label class="upload-label" style="flex:1;margin:0;">&#128247; Almacenamiento<input type="file" accept="image/*" multiple id="public-gallery-file" onchange="publicPickPhotos(this)" style="display:none"></label>
+        <label class="upload-label" style="flex:1;margin:0;">&#128248; Abrir c&aacute;mara<input type="file" accept="image/*" capture="environment" id="public-camera-file" onchange="publicPickPhotos(this)" style="display:none"></label>
+      </div>
+    </div>
+    <div class="modal-group">
+      <label class="modal-label">M&aacute;quina</label>
+      <input class="modal-input" id="public-machine-search" placeholder="Buscar modelo..." oninput="renderPublicMachineList()">
+      <div id="public-machine-list" style="max-height:170px;overflow-y:auto;border:1px solid var(--border);border-radius:9px;margin-top:8px;background:var(--surface);"></div>
+    </div>
+    <div id="public-upload-progress" class="upload-progress">Subiendo...</div>
+    <div class="modal-btns">
+      <button class="btn btn-primary" onclick="savePublicUpload()">Guardar fotos</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-public-upload')">Cancelar</button>
+    </div>
+  </div>
+</div>
 <script>
 const SB='https://etapmrnynqtqqjleujok.supabase.co';
 const KEY='sb_publishable_1GjAGxMyz7BTBa4NLVzAEw_-GPKqFCN';
@@ -534,6 +562,15 @@ function getImgUrl(url){return url?url+'?t='+Date.now():'';}
 /* ── State ── */
 let MACHINES=[], adminUnlocked=false, editingId=null, photosEditingId=null, modalNewFile=null, modalPreviewB64=null;
 let cfg={q:5,t:5}, playerName='', lastScore=0;
+let publicUploadFiles=[], publicUploadMachineId=null;
+
+function currentSeason(){
+  return (compState && compState.active && compState.compId) ? compState.compId : 'practica';
+}
+function photoUrl(p){return typeof p==='string'?p:(p&&p.url)||'';}
+function photoBy(p){return typeof p==='object'&&p?p.uploaded_by||p.by||'':'';}
+function photoAt(p){return typeof p==='object'&&p?p.uploaded_at||p.at||'':'';}
+function makePhotoEntry(url, by){return {url, uploaded_by:by, uploaded_at:new Date().toISOString()};}
 
 /* ── NAV ── */
 function goTo(v){
@@ -563,11 +600,17 @@ async function loadMachines(){
   try{
     // machines table now has: id, name, sort_order, photo_url (main), photo_urls (array of extras as JSON)
     const rows=await sbGet('/rest/v1/machines?order=name.asc&limit=500&select=id,name,sort_order,photo_url,photo_urls');
-    MACHINES=rows.map(r=>({
-      ...r,
-      photo_url: r.photo_url||'',
-      photo_urls: r.photo_urls ? (typeof r.photo_urls==='string'?JSON.parse(r.photo_urls):r.photo_urls) : []
-    }));
+    MACHINES=rows.map(r=>{
+      let extraPhotos=[];
+      try{
+        extraPhotos = r.photo_urls ? (typeof r.photo_urls==='string'?JSON.parse(r.photo_urls):r.photo_urls) : [];
+        if(!Array.isArray(extraPhotos)) extraPhotos=[];
+      }catch(e){
+        console.warn('photo_urls invalido para machine', r.id, e);
+        extraPhotos=[];
+      }
+      return {...r, photo_url:r.photo_url||'', photo_urls:extraPhotos.filter(p=>photoUrl(p))};
+    });
     MACHINES.sort((a,b)=>a.name.localeCompare(b.name,'es',{numeric:true,sensitivity:'base'}));
     setSyncBadge('ok');
   }catch(e){setSyncBadge('err');MACHINES=[];}
@@ -588,7 +631,7 @@ function buildCatalog(){
   if(!MACHINES.length){g.innerHTML='<div class="loading">Sin modelos. Agrega desde Admin.</div>';return;}
   MACHINES.forEach(m=>{
     const c=document.createElement('div');c.className='card';c.dataset.name=m.name.toLowerCase();
-    const allPhotos=[m.photo_url,...(m.photo_urls||[])].filter(Boolean);
+    const allPhotos=[...new Set([m.photo_url,...(m.photo_urls||[]).map(photoUrl)].filter(Boolean))];
     const badge=allPhotos.length>1?'<span style="position:absolute;top:6px;right:6px;background:var(--accent);color:#fff;font-size:0.6rem;font-weight:800;padding:2px 7px;border-radius:10px;">'+allPhotos.length+' \u{1F4F7}</span>':'';
     const ih=m.photo_url
       ?'<div style="position:relative;width:100%;height:100%;">'+badge+'<img src="'+getImgUrl(m.photo_url)+'" loading="lazy" draggable="false"></div>'
@@ -602,15 +645,22 @@ function buildCatalog(){
 
 let galleryPhotos=[],galleryIdx=0;
 function openGallery(m){
-  galleryPhotos=[m.photo_url,...(m.photo_urls||[])].filter(Boolean);
+  const mainMeta=(m.photo_urls||[]).find(p=>photoUrl(p)===m.photo_url);
+  galleryPhotos=[
+    ...(m.photo_url?[mainMeta||{url:m.photo_url, uploaded_by:''}]:[]),
+    ...(m.photo_urls||[]).filter(p=>photoUrl(p)!==m.photo_url).map(p=>typeof p==='string'?{url:p, uploaded_by:''}:p)
+  ].filter(p=>photoUrl(p));
   galleryIdx=0;
-  document.getElementById('lb-name').textContent=m.name;
+  const nameEl=document.getElementById('lb-name');
+  nameEl.dataset.baseName=m.name;
+  nameEl.textContent=m.name;
   renderGalleryPhoto();
   document.getElementById('lightbox').classList.add('open');
 }
 function renderGalleryPhoto(){
   const img=document.getElementById('lb-img');
-  img.src=getImgUrl(galleryPhotos[galleryIdx]);
+  const current=galleryPhotos[galleryIdx];
+  img.src=getImgUrl(photoUrl(current));
   const nav=document.getElementById('lb-nav');
   if(nav){
     if(galleryPhotos.length>1){
@@ -618,6 +668,13 @@ function renderGalleryPhoto(){
       nav.querySelector('#lb-counter').textContent=(galleryIdx+1)+' / '+galleryPhotos.length;
     }else{nav.style.display='none';}
   }
+  const nameEl=document.getElementById('lb-name');
+  const base=nameEl.dataset.baseName||nameEl.textContent.split(' · ').pop().split(' | ').shift();
+  nameEl.dataset.baseName=base;
+  const by=photoBy(current);
+  const at=photoAt(current);
+  const byTxt=by?' | Subida por '+by+(at?' el '+new Date(at).toLocaleDateString('es-CL'):''):'';
+  nameEl.textContent=(galleryPhotos.length>1?(galleryIdx+1)+'/'+galleryPhotos.length+' · ':'')+base+byTxt;
 }
 function galleryNav(dir){
   galleryIdx=(galleryIdx+dir+galleryPhotos.length)%galleryPhotos.length;
@@ -667,7 +724,7 @@ async function saveIncompleteGame(){
     await sbPost('/rest/v1/scores',{
       name:playerName, pts:qScore, correct:qCorrect,
       total:cfg.q, timer_sec:cfg.t, accuracy:acc, completed:false,
-      season:(compState.active?compState.compId:'practica')
+      season:currentSeason()
     });
   }catch(e){console.error('saveIncomplete failed',e);}
 }
@@ -717,7 +774,7 @@ async function preloadAndCountdown(pl){
   const queuedMachines = qQueue.map(i => pl[i]).filter(m => m && m.photo_url);
   const allUrls = [];
   queuedMachines.forEach(m => {
-    [m.photo_url, ...(m.photo_urls||[])].filter(Boolean).forEach(u => allUrls.push(u));
+    [m.photo_url, ...(m.photo_urls||[]).map(photoUrl)].filter(Boolean).forEach(u => allUrls.push(u));
   });
   let loaded = 0;
   const totalToLoad = allUrls.length;
@@ -737,7 +794,7 @@ async function preloadAndCountdown(pl){
   qQueue = qQueue.filter(i => {
     const m = pl[i];
     if(!m || !m.photo_url) return false;
-    const photos = [m.photo_url, ...(m.photo_urls||[])].filter(Boolean);
+    const photos = [m.photo_url, ...(m.photo_urls||[]).map(photoUrl)].filter(Boolean);
     // keep if at least one photo loaded ok
     return photos.some(u => imgCache[u] && imgCache[u] !== 'error');
   });
@@ -772,7 +829,7 @@ function nextQ(){
   document.getElementById('prog-lbl').textContent=qNum+'/'+qTotal;
   document.getElementById('prog-bar').style.width=((qNum-1)/qTotal*100)+'%';
   // Pick a RANDOM photo from this machine, only among loaded ones
-  const allP=[m.photo_url,...(m.photo_urls||[])].filter(Boolean);
+  const allP=[m.photo_url,...(m.photo_urls||[]).map(photoUrl)].filter(Boolean);
   const okP=allP.filter(u=>imgCache[u] && imgCache[u]!=='error');
   const photos = okP.length ? okP : allP;
   const chosenPhoto=photos[Math.floor(Math.random()*photos.length)];
@@ -855,20 +912,12 @@ async function endQuiz(){
 }
 
 /* ── SCORES ── */
-async function saveScore(name,pts,correct,total,sec,accuracy){try{await sbPost('/rest/v1/scores',{name,pts,correct,total,timer_sec:sec,accuracy,completed:true,season:(compState.active?compState.compId:'practica')});}catch(e){}}
-async function recordAnswer(mn,correct,timeMs,pts){try{await sbPost('/rest/v1/quiz_answers',{player_name:playerName,machine_name:mn,correct,time_ms:timeMs,pts,timer_sec:cfg.t,season:(compState.active?compState.compId:'practica')});}catch(e){}}
+async function saveScore(name,pts,correct,total,sec,accuracy){try{await sbPost('/rest/v1/scores',{name,pts,correct,total,timer_sec:sec,accuracy,completed:true,season:currentSeason()});}catch(e){}}
+async function recordAnswer(mn,correct,timeMs,pts){try{await sbPost('/rest/v1/quiz_answers',{player_name:playerName,machine_name:mn,correct,time_ms:timeMs,pts,timer_sec:cfg.t,season:currentSeason()});}catch(e){}}
 function getClaveHora(){const n=new Date();return String(n.getHours()).padStart(2,'0')+String(n.getMinutes()).padStart(2,'0');}
 
 async function clearScores(){
-  const currentSeason=(compState.active && compState.compId) ? compState.compId : 'practica';
-  const label = (currentSeason==='practica') ? 'MODO PRÁCTICA' : 'COMPETENCIA ACTIVA';
-  if(!confirm('¿Estás seguro de eliminar TODOS los puntajes de la temporada actual ('+label+')? Esta acción no se puede deshacer.'))return;
-  try{
-    await sbDelete('/rest/v1/scores?season=eq.'+encodeURIComponent(currentSeason));
-    alert('Puntajes eliminados exitosamente.');
-    loadScoresMgmt();
-    loadStats();
-  }catch(e){alert('Error: '+e.message);}
+  alert('Operacion bloqueada por seguridad: el proyecto no permite borrar puntajes en masa. Usa la gestion manual de un registro o el borrado restringido de periodos basura.');
 }
 
 async function renderLeaderboard(){
@@ -879,11 +928,11 @@ async function renderLeaderboard(){
 
   try{
     const isCompetition = compState.active && compState.compId;
-    const currentSeason = isCompetition ? compState.compId : 'practica';
+    const season = currentSeason();
 
     const scores=(await sbGet(
       '/rest/v1/scores?season=eq.' +
-      encodeURIComponent(currentSeason) +
+      encodeURIComponent(season) +
       '&order=created_at.desc&limit=500'
     )).filter(x=>x.completed!==false);
 
@@ -1008,46 +1057,11 @@ async function saveResetConfig(){
 }
 
 async function checkAutoReset(){
-  if(!resetConfig.resetDate) return;
-  const parts = resetConfig.resetDate.split('/');
-  if(parts.length!==3) return;
-  const resetMoment = new Date(parts[2], parts[1]-1, parts[0], 23, 59, 59);
-  const now = new Date();
-  if(now < resetMoment) return;
-  // Check in SUPABASE (not localStorage) if this date was already processed
-  try{
-    const done = await sbGet('/rest/v1/settings?key=eq.last_reset_done');
-    const lastDone = done[0]?.value || '';
-    if(lastDone === resetConfig.resetDate) return; // already processed across all devices
-  }catch(e){ console.error('checkAutoReset:',e); return; }
-  await executeAutoReset();
+  return;
 }
 
 async function executeAutoReset(){
-  try{
-    const resetDateUsed = resetConfig.resetDate;
-    const prizeUsed = resetConfig.prize || '';
-    const scores = await sbGet('/rest/v1/scores?season=eq.current&completed=eq.true&order=pts.desc&limit=500');
-    const seasonLabel = resetDateUsed.replace(/\//g,'-');
-    if(scores.length){
-      const best={};
-      scores.forEach(x=>{if(!best[x.name]||x.pts>best[x.name].pts)best[x.name]=x;});
-      const EXCLUDED=['obrist'];
-      const ranked = Object.values(best).filter(x=>!EXCLUDED.includes(x.name.toLowerCase().trim())).sort((a,b)=>b.pts-a.pts);
-      if(ranked.length){
-        const winner = ranked[0];
-        const histRow = {period_label:resetDateUsed,reset_date:resetDateUsed,rank:1,player_name:winner.name,pts:winner.pts,accuracy:winner.accuracy||0,timer_sec:winner.timer_sec||5,prize:prizeUsed};
-        const r = await sbPost('/rest/v1/winners_history', histRow);
-        if(!r.ok){const e=await r.text();console.error('Failed to save history:',e);alert('ERROR: No se pudo guardar el historial. Reset cancelado, datos intactos.');return;}
-      }
-    }
-    await sbFetch('/rest/v1/scores?season=eq.current',{method:'PATCH',headers:{'Content-Type':'application/json','apikey':KEY,'Authorization':'Bearer '+KEY},body:JSON.stringify({season:seasonLabel})});
-    await sbFetch('/rest/v1/quiz_answers?season=eq.current',{method:'PATCH',headers:{'Content-Type':'application/json','apikey':KEY,'Authorization':'Bearer '+KEY},body:JSON.stringify({season:seasonLabel})});
-    await sbFetch('/rest/v1/settings',{method:'POST',headers:{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify({key:'last_reset_done',value:resetDateUsed})});
-    await sbFetch('/rest/v1/settings',{method:'POST',headers:{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify({key:'reset_date',value:''})});
-    resetConfig.resetDate='';
-    console.log('Season archived as', seasonLabel);
-  }catch(e){console.error('executeAutoReset failed:',e);alert('Error en reset: '+e.message+'. Los datos NO fueron borrados.');}
+  alert('Reset automatico deshabilitado. Las competencias se cierran solo con compId y sin borrado masivo.');
 }
 
 async function loadWinnersHistory(){
@@ -1096,7 +1110,7 @@ async function toggleWinnerSeason(sid, seasonLabel){
 
 /* ── ADMIN ── */
 async function adminLogin(){
-  if(adminUnlocked){goTo('admin');renderAdmin();loadStats();loadResetConfig();loadSeasonList();loadMaxPts();loadCompetition();loadWinnersMgmt();return;}
+  if(adminUnlocked){goTo('admin');adminTab('competencia');loadResetConfig();loadMaxPts();loadCompetition();return;}
   const input=prompt('Clave:');if(!input)return;
   if(input.trim()===getClaveHora()){adminUnlocked=true;goTo('admin');adminTab('competencia');loadResetConfig();loadMaxPts();loadCompetition();}
   else alert('Clave incorrecta.');
@@ -1205,26 +1219,29 @@ function renderPhotosGrid(){
     mw.innerHTML='<img src="'+getImgUrl(m.photo_url)+'" draggable="false"><span class="photo-main-badge">MAIN</span>';
     const md=document.createElement('button');md.className='photo-del';md.textContent='x';
     md.onclick=async()=>{
-      if(!m.photo_urls?.length){alert('No puedes eliminar la unica foto.');return;}
-      const newMain=m.photo_urls[0];
-      m.photo_url=newMain;m.photo_urls=m.photo_urls.slice(1);
-      await sbPatch('/rest/v1/machines?id=eq.'+m.id,{photo_url:newMain,photo_urls:JSON.stringify(m.photo_urls)});
+      const extras=(m.photo_urls||[]).filter(p=>photoUrl(p)!==m.photo_url);
+      if(!extras.length){alert('No puedes eliminar la unica foto.');return;}
+      const newMain=extras[0];
+      m.photo_url=photoUrl(newMain);m.photo_urls=extras.slice(1);
+      await sbPatch('/rest/v1/machines?id=eq.'+m.id,{photo_url:m.photo_url,photo_urls:JSON.stringify(m.photo_urls)});
       renderPhotosGrid();buildCatalog();renderAdmin();
     };
     mw.appendChild(md);g.appendChild(mw);
   }
-  (m.photo_urls||[]).forEach((url,j)=>{
+  (m.photo_urls||[]).map((entry,idx)=>({entry,idx})).filter(x=>photoUrl(x.entry)!==m.photo_url).forEach(({entry,idx},j)=>{
+    const url=photoUrl(entry);
     const ew=document.createElement('div');ew.className='photo-wrap';
-    ew.innerHTML='<img src="'+getImgUrl(url)+'" draggable="false">';
+    const by=photoBy(entry);
+    ew.innerHTML='<img src="'+getImgUrl(url)+'" draggable="false">'+(by?'<div style="position:absolute;left:2px;right:2px;bottom:2px;background:rgba(0,0,0,0.72);color:#fff;font-size:0.48rem;font-weight:700;padding:1px 3px;border-radius:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+by+'</div>':'');
     const es=document.createElement('button');es.className='photo-set-main';es.textContent='v';
     es.onclick=async()=>{
-      const old=m.photo_url;m.photo_url=url;m.photo_urls.splice(j,1);if(old)m.photo_urls.unshift(old);
+      const old=m.photo_url;m.photo_url=url;m.photo_urls.splice(idx,1);if(old)m.photo_urls.unshift(old);
       await sbPatch('/rest/v1/machines?id=eq.'+m.id,{photo_url:url,photo_urls:JSON.stringify(m.photo_urls)});
       renderPhotosGrid();buildCatalog();renderAdmin();
     };
     const ed=document.createElement('button');ed.className='photo-del';ed.textContent='x';
     ed.onclick=async()=>{
-      m.photo_urls.splice(j,1);
+      m.photo_urls.splice(idx,1);
       await sbPatch('/rest/v1/machines?id=eq.'+m.id,{photo_urls:JSON.stringify(m.photo_urls)});
       renderPhotosGrid();buildCatalog();renderAdmin();
     };
@@ -1255,13 +1272,92 @@ async function addPhotos(input){
 
 
 /* ── STATS ── */
+function openPublicUpload(){
+  publicUploadFiles=[];
+  publicUploadMachineId=null;
+  document.getElementById('public-uploader').value='';
+  document.getElementById('public-machine-search').value='';
+  document.getElementById('public-upload-preview').innerHTML='<span style="color:var(--muted);font-size:0.8rem;">Sin fotos seleccionadas</span>';
+  document.getElementById('public-upload-progress').style.display='none';
+  document.getElementById('public-gallery-file').value='';
+  document.getElementById('public-camera-file').value='';
+  renderPublicMachineList();
+  openModal('modal-public-upload');
+}
+
+function publicPickPhotos(input){
+  const files=Array.from(input.files||[]).filter(f=>f.type&&f.type.startsWith('image/')).slice(0,3);
+  publicUploadFiles=files;
+  const preview=document.getElementById('public-upload-preview');
+  if(!files.length){
+    preview.innerHTML='<span style="color:var(--muted);font-size:0.8rem;">Sin fotos seleccionadas</span>';
+    return;
+  }
+  preview.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">'+files.map((f,i)=>'<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;font-size:0.72rem;color:var(--text);max-width:95px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Foto '+(i+1)+'</div>').join('')+'</div>';
+  if((input.files||[]).length>3)alert('Solo se cargar\u00e1n las primeras 3 fotos.');
+}
+
+function renderPublicMachineList(){
+  const list=document.getElementById('public-machine-list');
+  if(!list)return;
+  const q=(document.getElementById('public-machine-search')?.value||'').toLowerCase();
+  const rows=MACHINES.filter(m=>m.name.toLowerCase().includes(q)).slice(0,80);
+  if(!rows.length){list.innerHTML='<div class="no-data" style="padding:12px;">Sin modelos.</div>';return;}
+  list.innerHTML='';
+  rows.forEach(m=>{
+    const row=document.createElement('div');
+    row.className='player-header';
+    row.style.padding='9px 12px';
+    row.innerHTML='<span style="font-weight:800;font-size:0.82rem;">'+m.name+'</span><span style="color:var(--muted);font-size:0.7rem;">ID '+m.id+'</span>';
+    row.onclick=()=>{
+      publicUploadMachineId=m.id;
+      document.querySelectorAll('#public-machine-list .player-header').forEach(x=>x.style.background='');
+      row.style.background='rgba(6,182,212,0.16)';
+    };
+    list.appendChild(row);
+  });
+}
+
+async function savePublicUpload(){
+  const by=document.getElementById('public-uploader')?.value.trim();
+  if(!by){alert('Escribe quien sube la foto.');return;}
+  if(!publicUploadFiles.length){alert('Selecciona al menos una foto.');return;}
+  const m=MACHINES.find(x=>x.id===publicUploadMachineId);
+  if(!m){alert('Selecciona la maquina correspondiente.');return;}
+  if(!m.photo_urls)m.photo_urls=[];
+  const prog=document.getElementById('public-upload-progress');
+  prog.style.display='block';
+  try{
+    for(let i=0;i<publicUploadFiles.length;i++){
+      prog.textContent='Subiendo foto '+(i+1)+' de '+publicUploadFiles.length+'...';
+      const filename=makeFilename(m.id,'public_'+i+'_'+Date.now());
+      const url=await uploadPhoto(publicUploadFiles[i],filename);
+      const entry=makePhotoEntry(url,by);
+      if(!m.photo_url){
+        m.photo_url=url;
+        m.photo_urls.push(entry);
+        await sbPatch('/rest/v1/machines?id=eq.'+m.id,{photo_url:url,photo_urls:JSON.stringify(m.photo_urls)});
+      }else{
+        m.photo_urls.push(entry);
+        await sbPatch('/rest/v1/machines?id=eq.'+m.id,{photo_urls:JSON.stringify(m.photo_urls)});
+      }
+    }
+    prog.textContent='Fotos guardadas. Subidas por '+by+'.';
+    await loadMachines();
+    setTimeout(()=>closeModal('modal-public-upload'),700);
+  }catch(e){
+    alert('Error al subir: '+e.message);
+  }finally{
+    setTimeout(()=>{prog.style.display='none';},900);
+  }
+}
+
 async function loadStats(){
   const div=document.getElementById('stats-content');
   if(!div)return;
   div.innerHTML='<div class="loading">Cargando...</div>';
   try{
-    const currentSeason=(compState && compState.active && compState.compId) ? compState.compId : 'practica';
-    const s=await sbGet('/rest/v1/scores?season=eq.'+encodeURIComponent(currentSeason)+'&order=id.desc&limit=1000');
+    const s=await sbGet('/rest/v1/scores?season=eq.'+encodeURIComponent(currentSeason())+'&order=id.desc&limit=1000');
     
     if(!s || !s.length){div.innerHTML='<p style="color:var(--muted)">No hay datos suficientes para estadísticas.</p>';return;}
     
@@ -1284,6 +1380,109 @@ async function loadStats(){
   }catch(e){div.innerHTML='<div class="no-data">Error: '+e.message+'</div>';}
 }
 function sc(val,lbl,col){return '<div class="stat-card '+col+'"><div class="stat-card-val">'+val+'</div><div class="stat-card-lbl">'+lbl+'</div></div>';}
+
+loadStats = async function(){
+  const global=document.getElementById('stats-global');
+  const playersEl=document.getElementById('stats-players');
+  const machinesEl=document.getElementById('stats-machines-acc');
+  const speedEl=document.getElementById('stats-speed');
+  const activityEl=document.getElementById('stats-activity');
+  if(!global||!playersEl||!machinesEl||!speedEl||!activityEl)return;
+  [global,playersEl,machinesEl,speedEl,activityEl].forEach(el=>el.innerHTML='<div class="loading">Cargando...</div>');
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const avg=arr=>arr.length?Math.round(arr.reduce((a,b)=>a+b,0)/arr.length):0;
+  const scope=document.getElementById('stats-scope')?.value||'current';
+  try{
+    let scores=[], answers=[], scopeLabel='';
+    if(scope==='all'){
+      scopeLabel='todos los tiempos';
+      scores=await sbGet('/rest/v1/scores?order=id.desc&limit=5000');
+      answers=await sbGet('/rest/v1/quiz_answers?order=id.desc&limit=5000');
+    }else if(scope==='last3'){
+      const allScores=await sbGet('/rest/v1/scores?order=id.desc&limit=5000');
+      const seasons=[...new Set(allScores.map(x=>x.season).filter(s=>s&&s.startsWith('comp_')))].sort().reverse().slice(0,3);
+      scopeLabel=seasons.length?('ultimas '+seasons.length+' competencias'):'ultimas competencias';
+      scores=allScores.filter(x=>seasons.includes(x.season));
+      const allAnswers=await sbGet('/rest/v1/quiz_answers?order=id.desc&limit=5000');
+      answers=allAnswers.filter(x=>seasons.includes(x.season));
+    }else{
+      const season=currentSeason();
+      scopeLabel=(season==='practica')?'practica':season;
+      scores=await sbGet('/rest/v1/scores?season=eq.'+encodeURIComponent(season)+'&order=id.desc&limit=5000');
+      answers=await sbGet('/rest/v1/quiz_answers?season=eq.'+encodeURIComponent(season)+'&order=id.desc&limit=5000');
+    }
+
+    const complete=scores.filter(x=>x.completed!==false);
+    const incomplete=scores.filter(x=>x.completed===false);
+    const players=[...new Set(scores.map(x=>x.name).filter(Boolean))];
+    const best=complete.length?Math.max(...complete.map(x=>x.pts||0)):0;
+    const avgPts=avg(complete.map(x=>x.pts||0));
+    const avgAcc=avg(complete.map(x=>x.accuracy||0));
+    global.innerHTML=
+      sc(complete.length,'partidas completas','blue')+
+      sc(incomplete.length,'incompletas','purple')+
+      sc(players.length,'jugadores','green')+
+      sc(best,'mejor puntaje','gold')+
+      sc(avgPts,'promedio pts','')+
+      sc(avgAcc+'%','precision media','green');
+
+    if(!scores.length){
+      playersEl.innerHTML='<div class="no-data">Sin puntajes para '+esc(scopeLabel)+'.</div>';
+      machinesEl.innerHTML='<div class="no-data">Sin respuestas para calcular aciertos.</div>';
+      speedEl.innerHTML='<div class="no-data">Sin tiempos registrados.</div>';
+      activityEl.innerHTML='<div class="no-data">Sin actividad registrada.</div>';
+      return;
+    }
+
+    const byPlayer={};
+    scores.forEach(s=>{
+      const name=s.name||'Sin nombre';
+      if(!byPlayer[name])byPlayer[name]={name,complete:0,incomplete:0,best:0,pts:[],acc:[],last:s.created_at};
+      const p=byPlayer[name];
+      if(s.completed===false)p.incomplete++;else{p.complete++;p.pts.push(s.pts||0);p.acc.push(s.accuracy||0);p.best=Math.max(p.best,s.pts||0);}
+      if(s.created_at && (!p.last || new Date(s.created_at)>new Date(p.last)))p.last=s.created_at;
+    });
+    const playerRows=Object.values(byPlayer).sort((a,b)=>b.best-a.best).slice(0,50);
+    playersEl.innerHTML='<table><thead><tr><th>Jugador</th><th>Mejor</th><th>Prom.</th><th>Prec.</th><th>OK</th><th>Inc.</th><th>Ultima</th></tr></thead><tbody>'+
+      playerRows.map(p=>{
+        const d=p.last?new Date(p.last):null;
+        const f=d&&!isNaN(d)?d.toLocaleDateString('es-CL'):'-';
+        return '<tr><td><strong>'+esc(p.name)+'</strong></td><td style="color:var(--gold);font-weight:800">'+p.best+'</td><td>'+avg(p.pts)+'</td><td>'+avg(p.acc)+'%</td><td style="color:var(--green)">'+p.complete+'</td><td style="color:var(--red)">'+p.incomplete+'</td><td style="color:var(--muted)">'+f+'</td></tr>';
+      }).join('')+'</tbody></table>';
+
+    const byMachine={};
+    answers.forEach(a=>{
+      const name=a.machine_name||'Sin modelo';
+      if(!byMachine[name])byMachine[name]={name,total:0,ok:0,times:[]};
+      byMachine[name].total++;
+      if(a.correct)byMachine[name].ok++;
+      if(a.time_ms!==null&&a.time_ms!==undefined)byMachine[name].times.push(Number(a.time_ms)||0);
+    });
+    const machineRows=Object.values(byMachine).filter(m=>m.total>0).sort((a,b)=>(a.ok/a.total)-(b.ok/b.total)).slice(0,50);
+    machinesEl.innerHTML=machineRows.length?('<table><thead><tr><th>Modelo</th><th>Acierto</th><th>OK</th><th>Total</th></tr></thead><tbody>'+
+      machineRows.map(m=>{
+        const pct=Math.round(m.ok*100/m.total);
+        const col=pct>=70?'var(--green)':pct>=45?'var(--gold)':'var(--red)';
+        return '<tr><td><strong>'+esc(m.name)+'</strong><div class="acc-bar"><div class="acc-fill" style="width:'+pct+'%;background:'+col+'"></div></div></td><td style="color:'+col+';font-weight:800">'+pct+'%</td><td>'+m.ok+'</td><td>'+m.total+'</td></tr>';
+      }).join('')+'</tbody></table>'):'<div class="no-data">Sin respuestas registradas.</div>';
+
+    const speedRows=Object.values(byMachine).filter(m=>m.times.length).sort((a,b)=>avg(a.times)-avg(b.times)).slice(0,50);
+    speedEl.innerHTML=speedRows.length?('<table><thead><tr><th>Modelo</th><th>Tiempo prom.</th><th>Respuestas</th></tr></thead><tbody>'+
+      speedRows.map(m=>'<tr><td><strong>'+esc(m.name)+'</strong></td><td style="color:var(--accent2);font-weight:800">'+(avg(m.times)/1000).toFixed(2)+'s</td><td>'+m.times.length+'</td></tr>').join('')+
+      '</tbody></table>'):'<div class="no-data">Sin tiempos registrados.</div>';
+
+    const today=new Date();today.setHours(0,0,0,0);
+    const days=[];
+    for(let i=13;i>=0;i--){const d=new Date(today);d.setDate(today.getDate()-i);days.push(d);}
+    const byDay={};
+    scores.forEach(s=>{if(!s.created_at)return;const k=new Date(s.created_at).toLocaleDateString('es-CL');byDay[k]=(byDay[k]||0)+1;});
+    activityEl.innerHTML='<table><thead><tr><th>Dia</th><th>Partidas</th></tr></thead><tbody>'+
+      days.map(d=>{const k=d.toLocaleDateString('es-CL');return '<tr><td>'+k+'</td><td><span class="pill '+((byDay[k]||0)>0?'g':'r')+'">'+(byDay[k]||0)+'</span></td></tr>';}).join('')+
+      '</tbody></table>';
+  }catch(e){
+    [global,playersEl,machinesEl,speedEl,activityEl].forEach(el=>el.innerHTML='<div class="no-data">Error: '+esc(e.message)+'</div>');
+  }
+};
 function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
@@ -1318,13 +1517,12 @@ function adminTab(tab){
 let allScoresMgmt = [];
 let editingScoreId = null;
 
-async function loadScores(){
+async function loadScoresMgmt(){
   const list=document.getElementById('scores-mgmt-list'); 
   if(!list)return;
   list.innerHTML='<div class="loading">Cargando...</div>';
   try{
-    const currentSeason=(compState && compState.active && compState.compId) ? compState.compId : 'practica';
-    allScoresMgmt=await sbGet('/rest/v1/scores?season=eq.'+encodeURIComponent(currentSeason)+'&order=pts.desc,id.asc&limit=500');
+    allScoresMgmt=await sbGet('/rest/v1/scores?season=eq.'+encodeURIComponent(currentSeason())+'&order=pts.desc,id.asc&limit=500');
     
     if(!allScoresMgmt || !allScoresMgmt.length){
       list.innerHTML='<div class="no-data">Sin registros de puntajes.</div>';
@@ -1333,39 +1531,6 @@ async function loadScores(){
     renderScoresMgmt(); 
   }catch(e){
     list.innerHTML='<div class="no-data">Error: '+e.message+'</div>';
-  }
-}
-
-// Pega esta nueva función justo abajo de la anterior
-async function deleteScore(id){
-  if(!confirm('¿Estás seguro de que deseas eliminar este puntaje permanentemente?')) return;
-  try {
-    // Tu archivo utiliza internamente un endpoint mediante sbGet simulando API REST nativa
-    await fetch(SUPABASE_URL + '/rest/v1/scores?id=eq.' + id, {
-      method: 'DELETE',
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_KEY,
-        'Content-Type': 'application/json'
-      }
-    });
-    alert('Puntaje eliminado.');
-    loadScores(); // Recarga la pestaña usando el nombre correcto
-  } catch(e) {
-    alert('Error: ' + e.message);
-  }
-}
-// Nueva función necesaria para ejecutar la eliminación en Supabase
-async function deleteScore(id){
-  if(!confirm('¿Estás seguro de que deseas eliminar este puntaje permanentemente?')) return;
-  try {
-    // Reemplaza con tu método correspondiente para DELETE (ej: sbDelete o sbPost con cabeceras)
-    // Si usas una función estándar de Fetch o Axios estructurada en tu proyecto:
-    await sbGet('/rest/v1/scores?id=eq.'+id, { method: 'DELETE' }); 
-    alert('Puntaje eliminado con éxito.');
-    loadScoresMgmt(); // Recarga la lista automáticamente
-  } catch(e) {
-    alert('Error al eliminar: ' + e.message);
   }
 }
 function renderScoresMgmt(){
@@ -1467,17 +1632,18 @@ async function deleteScore(id){
 /* ── SEASONS HISTORY ── */
 async function loadSeasonList(){
   try{
-    const rows=await sbGet('/rest/v1/scores?select=season&order=season.asc');
-    const seasons=[...new Set(rows.map(r=>r.season).filter(s=>s&&s!=='current'))];
+    const rows=await sbGet('/rest/v1/winners_history?rank=eq.1&order=id.desc&limit=200');
     const sel=document.getElementById('season-select');
     if(!sel)return;
     sel.innerHTML='<option value="">-- Seleccionar per\u00edodo --</option>';
-    if(!seasons.length){sel.innerHTML='<option value="">Sin per\u00edodos archivados</option>';return;}
-    // Sort: compId desc (most recent first), then others
-    seasons.sort().reverse().forEach(s=>{
+    const winners=rows
+      .map(w=>({season:w.season_ref || (w.reset_date||'').replace(/\//g,'-'), winner:w.player_name||'', pts:w.pts||0, label:w.reset_date||w.period_label||''}))
+      .filter(w=>w.season);
+    if(!winners.length){sel.innerHTML='<option value="">Sin per\u00edodos archivados</option>';return;}
+    winners.forEach(w=>{
       const opt=document.createElement('option');
-      opt.value=s;
-      opt.textContent=seasonLabel(s);
+      opt.value=w.season;
+      opt.textContent=(w.label?seasonLabel(w.season):seasonLabel(w.season))+(w.winner?' - '+w.winner:'')+(w.pts?' ('+w.pts+' pts)':'');
       sel.appendChild(opt);
     });
   }catch(e){console.error('loadSeasonList:',e);}
@@ -1739,7 +1905,7 @@ async function addCompetitionTime(){
 }
 
 async function stopCompetition(){
-  if(!confirm('Detener la competencia AHORA? Se guardar\u00e1 el ganador y se archivar\u00e1n los puntajes.'))return;
+  if(!confirm('Detener la competencia AHORA? Se guardara el ganador y la app volvera a modo practica. Los puntajes no se borran.'))return;
   await finishCompetition();
 }
 
