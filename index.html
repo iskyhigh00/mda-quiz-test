@@ -1260,15 +1260,21 @@ async function loadStats(){
   if(!div)return;
   div.innerHTML='<div class="loading">Cargando...</div>';
   try{
-    const currentSeason=(compState.active && compState.compId) ? compState.compId : 'practica';
+    const currentSeason=(compState && compState.active && compState.compId) ? compState.compId : 'practica';
     const s=await sbGet('/rest/v1/scores?season=eq.'+encodeURIComponent(currentSeason)+'&order=id.desc&limit=1000');
-    if(!s.length){div.innerHTML='<p style="color:var(--muted)">No hay datos suficientes para estadísticas.</p>';return;}
+    
+    if(!s || !s.length){div.innerHTML='<p style="color:var(--muted)">No hay datos suficientes para estadísticas.</p>';return;}
+    
     const compl=s.filter(x=>x.completed!==false);
     const total=compl.length;
+    
     if(!total){div.innerHTML='<p style="color:var(--muted)">No hay cuestionarios completados.</p>';return;}
-    const avg=Math.round(compl.reduce((acc,x)=>acc+x.pts,0)/total);
-    const max=Math.max(...compl.map(x=>x.pts));
-    const uniqueUsers=new Set(compl.map(x=>x.name)).size;
+    
+    const avg=Math.round(compl.reduce((acc,x)=>acc+(x.pts||0),0)/total);
+    // Corrección: Evita pasar un arreglo vacío a Math.max
+    const max=compl.length ? Math.max(...compl.map(x=>x.pts||0)) : 0; 
+    const uniqueUsers=new Set(compl.map(x=>x.name).filter(Boolean)).size;
+    
     div.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;">'+
       '<div class="stat-card" style="background:var(--bg);padding:12px;border-radius:6px;border:1px solid var(--border);text-align:center"><div style="font-size:0.75rem;color:var(--muted)">Intentos</div><div style="font-size:1.4rem;font-weight:800;color:var(--accent2)">'+total+'</div></div>'+
       '<div class="stat-card" style="background:var(--bg);padding:12px;border-radius:6px;border:1px solid var(--border);text-align:center"><div style="font-size:0.75rem;color:var(--muted)">Promedio</div><div style="font-size:1.4rem;font-weight:800;color:var(--text)">'+avg+'</div></div>'+
