@@ -321,11 +321,13 @@ tbody tr.me td{background:rgba(124,58,237,0.08);}
           <label class="form-label">Premio</label>
           <input class="modal-input" id="prize-input" placeholder="Ej: 1 hora libre" style="-webkit-user-select:text;user-select:text;" oninput="resetConfig.prize=this.value;">
         </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <div style="flex:1;min-width:90px;"><label class="form-label">D&iacute;as</label>
-            <input class="modal-input" id="comp-days" type="number" placeholder="7" min="0" max="365" value="7"></div>
-          <div style="flex:1;min-width:90px;"><label class="form-label">Horas</label>
-            <input class="modal-input" id="comp-hours" type="number" placeholder="0" min="0" max="23" value="0"></div>
+       <div style="display:flex;gap:10px;flex-wrap:wrap;">
+       <div style="flex:1;min-width:90px;"><label class="form-label">D&iacute;as</label>
+         <input class="modal-input" id="comp-days" type="number" placeholder="7" min="0" max="365" value="7"></div>
+         <div style="flex:1;min-width:90px;"><label class="form-label">Horas</label>
+         <input class="modal-input" id="comp-hours" type="number" placeholder="0" min="0" max="23" value="0"></div>
+         <div style="flex:1;min-width:90px;"><label class="form-label">Minutos</label>
+         <input class="modal-input" id="comp-minutes" type="number" placeholder="0" min="0" max="59" value="0"></div>
         </div>
         <div id="comp-info" style="background:var(--surface);border-radius:9px;padding:10px 14px;font-size:0.82rem;color:var(--muted);"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -1633,15 +1635,23 @@ function startCompetitionCountdown(){
   tick();
   compCountdownInt=setInterval(tick,1000);
 }
-
 async function startCompetition(){
-  const days=parseInt(document.getElementById('comp-days')?.value)||0;
-  const hours=parseInt(document.getElementById('comp-hours')?.value)||0;
-  if(days===0&&hours===0){alert('Define una duraci\u00f3n.');return;}
+  const days=parseInt(document.getElementById('comp-days')?.value||0);
+  const hours=parseInt(document.getElementById('comp-hours')?.value||0);
+  const minutes=parseInt(document.getElementById('comp-minutes')?.value||0);
+
+  const durationMs=(days*24*60*60*1000)+(hours*60*60*1000)+(minutes*60*1000);
+
+  if(durationMs<=0){
+    alert('Por favor especifica una duracion valida.');
+    return;
+  }
+
   const prize=document.getElementById('prize-input')?.value.trim()||'';
-  const end=new Date(Date.now()+days*86400000+hours*3600000);
+  const end=new Date(Date.now()+durationMs);
+
   if(!confirm('Iniciar competencia hasta '+end.toLocaleString('es-CL')+'?'))return;
-  // Unique competition ID based on start timestamp
+
   const now=new Date();
   const compId='comp_'+now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0')+'_'+String(now.getHours()).padStart(2,'0')+String(now.getMinutes()).padStart(2,'0')+String(now.getSeconds()).padStart(2,'0');
   try{
@@ -1658,7 +1668,6 @@ async function startCompetition(){
     alert('Competencia iniciada.');
   }catch(e){alert('Error: '+e.message);}
 }
-
 async function updateCompetitionPrize(){
   const prize=document.getElementById('prize-input')?.value.trim()||'';
   try{
@@ -1672,8 +1681,12 @@ async function updateCompetitionPrize(){
 async function addCompetitionTime(){
   const days=parseInt(prompt('D\u00edas a agregar:','0'))||0;
   const hours=parseInt(prompt('Horas a agregar:','0'))||0;
-  if(days===0&&hours===0)return;
-  const newEnd=new Date(compState.endTime.getTime()+days*86400000+hours*3600000);
+  const minutes=parseInt(prompt('Minutos a agregar:','0'))||0;
+
+  if(days===0&&hours===0&&minutes===0)return;
+
+  const extraMs=(days*24*60*60*1000)+(hours*60*60*1000)+(minutes*60*1000);
+  const newEnd=new Date(compState.endTime.getTime()+extraMs);
   try{
     await sbFetch('/rest/v1/settings',{method:'POST',headers:{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify({key:'competition_end',value:newEnd.toISOString()})});
     compState.endTime=newEnd;
