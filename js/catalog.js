@@ -107,9 +107,26 @@ function renderGalleryPhoto() {
   const nameEl = document.getElementById('lb-name');
   const base = nameEl.dataset.baseName || nameEl.textContent.split(' - ').pop().split(' | ').shift();
   nameEl.dataset.baseName = base;
-  nameEl.textContent = (galleryPhotos.length > 1 ? (galleryIdx + 1) + '/' + galleryPhotos.length + ' - ' : '') + base;
+  
+  // Mostrar contador de fotos de forma separada
+  if (galleryPhotos.length > 1) {
+    nameEl.innerHTML = `<span class="counter">📷 ${galleryIdx + 1} / ${galleryPhotos.length}</span><span>${base}</span>`;
+  } else {
+    nameEl.innerHTML = `<span>${base}</span>`;
+  }
+  
+  const by = photoBy(current);
+  const at = photoAt(current);
+  const meta = document.getElementById('lb-photo-meta');
+  if (meta) {
+    if (by) {
+      meta.textContent = '📸 Subida por ' + by + (at ? ' el ' + new Date(at).toLocaleDateString('es-CL') : '');
+      meta.style.display = 'block';
+    } else {
+      meta.style.display = 'none';
+    }
+  }
 }
-
 function renderLbThumbs() {
   const wrap = document.getElementById('lb-thumbs');
   if (!wrap) return;
