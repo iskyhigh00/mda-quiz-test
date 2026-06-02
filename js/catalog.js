@@ -85,12 +85,11 @@ function openGallery(m) {
   document.getElementById('lb-form-note')?.classList.remove('open');
   document.getElementById('lb-form-photo')?.classList.remove('open');
   document.getElementById('lb-form-author-name2').textContent = playerName || localStorage.getItem('mda_user_name') || '';
-  renderGalleryPhoto();
+  renderGalleryPhoto();  // <-- Asegurar que esta línea existe
   renderLbThumbs();
   loadLbNotes(m.id);
   document.getElementById('lightbox').classList.add('open');
 }
-
 function renderGalleryPhoto() {
   const img = document.getElementById('lb-img');
   const current = galleryPhotos[galleryIdx];
@@ -181,14 +180,14 @@ function toggleLbForm(type) {
 async function loadLbNotes(machineId) {
   const wrap = document.getElementById('lb-notes-list');
   if (!wrap) return;
-  wrap.innerHTML = '<div style="font-size:0.75rem;color:var(--muted);padding:8px 0;">Cargando datos curiosos...</div>';
+  wrap.innerHTML = '<div class="lb-data-title">DATOS CURIOSOS</div><div style="text-align:center;padding:16px;color:var(--muted);">🔍 Cargando...</div>';
   try {
     const notes = await sbGet('/rest/v1/machine_notes?machine_id=eq.' + machineId + '&order=created_at.asc&limit=100');
     if (!notes.length) {
-      wrap.innerHTML = '<div class="lb-data-title">📝 DATOS CURIOSOS</div><div class="no-data" style="font-size:0.8rem;padding:12px 0;text-align:center;color:var(--muted);">Sin datos registrados.<br>¡Sé el primero en aportar!</div>';
+      wrap.innerHTML = '<div class="lb-data-title">DATOS CURIOSOS</div><div class="no-data">✨ Sin datos registrados.<br>¡Sé el primero en aportar!</div>';
       return;
     }
-    wrap.innerHTML = '<div class="lb-data-title">📝 DATOS CURIOSOS</div>' +
+    wrap.innerHTML = '<div class="lb-data-title">DATOS CURIOSOS</div>' +
       notes.map(n => {
         const d = new Date(n.created_at);
         const fecha = d.toLocaleDateString('es-CL');
@@ -199,10 +198,9 @@ async function loadLbNotes(machineId) {
         '</div>';
       }).join('');
   } catch(e) {
-    wrap.innerHTML = '<div class="lb-data-title">📝 DATOS CURIOSOS</div><div class="no-data" style="color:var(--red);">Error: ' + e.message + '</div>';
+    wrap.innerHTML = '<div class="lb-data-title">DATOS CURIOSOS</div><div class="no-data" style="color:var(--red);">⚠️ Error: ' + e.message + '</div>';
   }
 }
-
 async function lbSubmitNote() {
   if (!lbMachineId) return;
   const author = playerName || localStorage.getItem('mda_user_name') || '';
