@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MDAs Casino</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- PANTALLA DE BIENVENIDA -->
+<div id="view-welcome" class="view">
+  <div class="welcome-logo">🎰</div>
+  <div class="welcome-title">MDAs Casino</div>
+  <div class="welcome-sub">Catálogo de máquinas tragamonedas<br>Casino Dreams Temuco</div>
+  <div class="welcome-input-wrap">
+    <input class="welcome-name" id="welcome-name-input" type="text" placeholder="Tu nombre o apodo..." maxlength="40" onkeydown="if(event.key==='Enter')confirmWelcome()">
+    <button class="welcome-btn" onclick="confirmWelcome()">Entrar →</button>
+  </div>
+</div>
+
+<!-- NAVEGACIÓN -->
+<nav id="main-nav">
+  <div class="nav-logo">🎰 MDAs</div>
+  <div class="nav-tab active" onclick="goTo('catalog')">📋 Catálogo</div>
+  <div class="nav-tab" onclick="goTo('setup')">🎮 Quiz</div>
+  <div class="nav-tab" onclick="goTo('ranking')">🏆 Ranking</div>
+  <div class="nav-tab" onclick="adminLogin()">⚙️ Admin</div>
+</nav>
+
+<!-- VISTA CATÁLOGO -->
+<div id="view-catalog" class="view">
+  <div class="search-row">
+    <input class="search-input" id="search" placeholder="Buscar modelo..." oninput="filterCatalog()">
+    <button class="btn btn-primary btn-sm" onclick="openPublicUpload()">+ Subir foto</button>
+    <span class="badge" id="cat-count">Cargando...</span>
+  </div>
+  <div class="grid" id="grid"><div class="loading">Cargando...</div></div>
+</div>
+
+<!-- VISTA SETUP QUIZ -->
+<div id="view-setup" class="view">
+  <div style="text-align:right;padding:4px 0 0;"><button onclick="changeName()" style="font-size:0.7rem;background:none;border:none;color:var(--muted);cursor:pointer;text-decoration:underline;">Cambiar nombre</button></div>
+  <div class="setup-card">
+    <h2>⚙️ Configurar Quiz</h2>
+    <p>5 segundos premia más la velocidad. 10 segundos da más tiempo para pensar.</p>
+    <div id="no-img-warn" class="warn-box">No hay modelos con foto. Agrega fotos desde Admin.</div>
+    <div class="form-group">
+      <label class="form-label">Tu nombre</label>
+      <input class="name-input" id="player-name" placeholder="Escribe tu nombre..." maxlength="20">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Número de preguntas</label>
+      <div class="chips">
+        <div class="chip active" onclick="pickChip('q',5,this)">5</div>
+        <div class="chip" onclick="pickChip('q',10,this)">10</div>
+        <div class="chip" onclick="pickChip('q',20,this)">20</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Segundos por pregunta</label>
+      <div class="chips">
+        <div class="chip active" onclick="pickChip('t',5,this)">⚡ 5s</div>
+        <div class="chip" onclick="pickChip('t',10,this)">10s</div>
+      </div>
+    </div>
+    <button class="start-btn" onclick="startQuiz()">▶ Comenzar</button>
+  </div>
+</div>
+
+<!-- VISTA QUIZ -->
+<div id="view-quiz" class="view">
+  <div class="quiz-topbar">
+    <div class="quiz-stats">
+      <div class="qstat ok"><div class="qstat-val" id="q-ok">0</div><div class="qstat-lbl">OK</div></div>
+      <div class="qstat err"><div class="qstat-val" id="q-err">0</div><div class="qstat-lbl">Error</div></div>
+      <div class="qstat pts"><div class="qstat-val" id="q-pts">0</div><div class="qstat-lbl">Puntos</div></div>
+    </div>
+    <button class="quit-btn" onclick="restartQuiz()">⟳ Reiniciar</button>
+    <button class="quit-btn" onclick="goTo('setup')">✕ Salir</button>
+  </div>
+  <div class="prog-wrap">
+    <span class="prog-lbl" id="prog-lbl">0/0</span>
+    <div class="prog-bar" id="prog-bar" style="width:0%"></div>
+  </div>
+  <div class="timer-row">
+    <div class="ring-wrap">
+      <svg class="ring" width="52" height="52" viewBox="0 0 52 52">
+        <circle class="ring-bg" cx="26" cy="26" r="21"/>
+        <circle class="ring-fg" id="ring-fg" cx="26" cy="26" r="21" stroke-dasharray="131.9" stroke-dashoffset="0"/>
+      </svg>
+      <div class="ring-num" id="ring-num">10</div>
+    </div>
+    <div class="pts-hint">Más rápido = más puntos → <span id="pts-preview">+100</span></div>
+  </div>
+  <div class="quiz-card">
+    <div class="quiz-img"><img id="quiz-img" src="" alt=""></div>
+    <div class="quiz-q">¿Cómo se llama este modelo?</div>
+    <div class="opts" id="opts"></div>
+    <div class="feedback"><span class="fb-msg" id="fb-msg"></span><span class="fb-pts" id="fb-pts" style="display:none"></span></div>
+    <div class="auto-bar-wrap" id="auto-bar-wrap" style="display:none"><div class="auto-bar" id="auto-bar"></div></div>
+  </div>
+</div>
+
+<!-- VISTA RESULTADOS -->
+<div id="view-results" class="view">
+  <div class="result-box">
+    <div class="r-trophy" id="r-trophy">🏆</div>
+    <div class="r-name" id="r-name"></div>
+    <div class="r-score" id="r-score">0</div>
+    <div class="r-sub" id="r-sub"></div>
+    <div class="r-stats">
+      <div class="rs ok"><div class="rs-val" id="r-ok">0</div><div class="rs-lbl">Correctas</div></div>
+      <div class="rs err"><div class="rs-val" id="r-err">0</div><div class="rs-lbl">Errores</div></div>
+      <div class="rs acc"><div class="rs-val" id="r-acc">0%</div><div class="rs-lbl">Precisión</div></div>
+    </div>
+  </div>
+  <button class="play-again" onclick="goTo('setup')">⟳ Jugar de nuevo</button>
+  <div class="section-box"><div class="lb-head">🏆 Puntajes</div><div id="lb-body"><div class="loading">Cargando...</div></div></div>
+</div>
+
+<!-- VISTA RANKING -->
+<div id="view-ranking" class="view">
+  <div id="prize-banner-wrap"></div>
+  <div class="section-box"><div class="lb-head">🏆 Ranking global</div><div id="ranking-lb-body"><div class="loading">Cargando...</div></div></div>
+  <div class="section-box"><div class="lb-head">🏆 Historial de ganadores</div><div id="winners-history-body"><div class="loading">Cargando...</div></div></div>
+</div>
+
+<!-- VISTA ADMIN (simplificada) -->
+<div id="view-admin" class="view">
+  <div style="display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap;border-bottom:1px solid var(--border);">
+    <div class="atab atab-active" onclick="adminTab('competencia')">🏆 Competencia</div>
+    <div class="atab" onclick="adminTab('modelos')">🎰 Modelos</div>
+    <div class="atab" onclick="adminTab('estadisticas')">📊 Estadísticas</div>
+    <div class="atab" onclick="adminTab('historial')">📅 Historial</div>
+  </div>
+  <div id="atab-competencia" class="atab-panel">
+    <div class="section-box"><div class="section-head">🏆 Control de competencia <span id="comp-status-badge"></span></div>
+      <div style="padding:14px">
+        <div><label class="form-label">Premio</label><input class="modal-input" id="prize-input" placeholder="Ej: 1 hora libre"></div>
+        <div style="display:flex;gap:10px;margin:12px 0"><div><label class="form-label">Días</label><input class="modal-input" id="comp-days" type="number" value="0"></div>
+        <div><label class="form-label">Horas</label><input class="modal-input" id="comp-hours" type="number" value="0"></div>
+        <div><label class="form-label">Minutos</label><input class="modal-input" id="comp-minutes" type="number" value="0"></div></div>
+        <div id="comp-info"></div>
+        <div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-primary" onclick="startCompetition()">▶ Iniciar competencia</button>
+        <button class="btn btn-secondary" onclick="updateCompetitionPrize()" style="display:none;">✏️ Actualizar premio</button>
+        <button class="btn btn-secondary" onclick="addCompetitionTime()" style="display:none;">+ Agregar tiempo</button>
+        <button class="btn btn-danger" onclick="stopCompetition()" style="display:none;">⏹ Detener ahora</button></div>
+      </div>
+    </div>
+    <div class="section-box"><div class="section-head">🎯 Puntaje máximo por preguntas <button class="btn btn-primary btn-sm" onclick="saveMaxPts()">Guardar</button></div>
+      <div style="padding:14px;display:flex;gap:12px"><div><label class="form-label">5 preguntas</label><input class="modal-input" id="max-pts-5" type="number"></div>
+      <div><label class="form-label">10 preguntas</label><input class="modal-input" id="max-pts-10" type="number"></div>
+      <div><label class="form-label">20 preguntas</label><input class="modal-input" id="max-pts-20" type="number"></div></div>
+    </div>
+  </div>
+  <div id="atab-modelos" class="atab-panel" style="display:none;">
+    <div class="admin-toolbar"><input class="admin-search" id="admin-search" placeholder="Buscar modelo..." oninput="renderAdmin()"><button class="btn btn-primary" onclick="openAdd()">+ Agregar</button><span class="sync-badge sync-loading" id="sync-badge">...</span></div>
+    <div class="section-box"><div class="section-head">🎰 Modelos <span id="admin-count"></span></div><div id="admin-list"></div></div>
+  </div>
+  <div id="atab-estadisticas" class="atab-panel" style="display:none;">
+    <div style="display:flex;justify-content:space-between;margin-bottom:12px"><div>📊 Resumen</div><select id="stats-scope" onchange="loadStats()"><option value="current">Competencia actual</option><option value="last3">Últimas 3 temporadas</option><option value="all">Todos los tiempos</option></select><button class="refresh-btn" onclick="loadStats()">⟳</button></div>
+    <div class="stats-grid" id="stats-global"></div>
+    <div class="section-box"><div class="section-head" onclick="toggleSection('stats-players-wrap','toggle-players')">👥 Jugadores <span id="toggle-players" style="float:right">▼</span></div><div id="stats-players-wrap" style="display:none"><div id="stats-players"><div class="loading">Cargando...</div></div></div></div>
+  </div>
+  <div id="atab-historial" class="atab-panel" style="display:none;">
+    <div class="section-box"><div class="section-head">📅 Ver período archivado</div><div style="padding:12px"><select id="season-select" onchange="loadSeasonData()"><option value="">-- Seleccionar período --</option></select><button class="btn btn-secondary btn-sm" onclick="loadSeasonList()">⟳ Actualizar</button></div><div id="season-data"></div></div>
+  </div>
+</div>
+
+<!-- MODALES Y OVERLAYS -->
+<div id="countdown-overlay" style="display:none;position:fixed;inset:0;z-index:998;background:rgba(10,10,18,0.97);flex-direction:column;align-items:center;justify-content:center;"><div id="cd-status">Cargando...</div><div id="cd-num" style="font-size:6rem;color:#06b6d4;"></div><div style="width:220px;height:6px;background:#2d2d4e;"><div id="cd-bar" style="width:0%;height:100%;background:linear-gradient(90deg,#7c3aed,#06b6d4);"></div></div></div>
+
+<div id="lightbox" onclick="closeLb()"><div class="lb-box" onclick="event.stopPropagation()"><div class="lb-img"><img id="lb-img" src=""></div><div id="lb-nav" style="display:none"><button onclick="galleryNav(-1)">‹</button><span id="lb-counter"></span><button onclick="galleryNav(1)">›</button></div><div class="lb-name" id="lb-name"></div><div class="lb-photo-thumbs" id="lb-thumbs"></div><div class="lb-info-section" id="lb-notes-list"></div><div class="lb-actions"><button class="lb-action-btn" onclick="toggleLbActions()">Aportar</button><button class="lb-close" onclick="closeLb()">Cerrar</button></div><div class="lb-contrib-menu" id="lb-contrib-menu"><button onclick="toggleLbForm('note')">Agregar dato</button><button onclick="toggleLbForm('photo')">Agregar foto</button></div><div class="lb-mini-form" id="lb-form-note"><textarea id="lb-note-input" rows="3" placeholder="Ej: dato curioso..."></textarea><div><button onclick="toggleLbForm('note')">Cancelar</button><button onclick="lbSubmitNote()">Publicar</button></div></div><div class="lb-mini-form" id="lb-form-photo"><div>Subir como: <strong id="lb-form-author-name2"></strong></div><div><label class="upload-label">📁 Galería<input type="file" accept="image/*" multiple id="lb-gallery-file" onchange="lbUploadPhotos(this)" style="display:none"></label><label class="upload-label">📷 Cámara<input type="file" accept="image/*" capture="environment" id="lb-camera-file" onchange="lbUploadPhotos(this)" style="display:none"></label></div><div><button onclick="toggleLbForm('photo')">Cancelar</button></div></div></div></div>
+
+<div id="modal-model" class="modal"><div class="modal-box"><div class="modal-title" id="modal-title">Agregar modelo</div><div><label>Nombre</label><input class="modal-input" id="modal-name"></div><div><label>Foto principal</label><div class="img-preview" id="modal-preview"></div><label class="upload-label">📷 Seleccionar imagen<input type="file" accept="image/*" id="modal-file" onchange="previewFile(this)" style="display:none"></label></div><div class="modal-btns"><button class="btn btn-primary" onclick="saveModel()">Guardar</button><button class="btn btn-secondary" onclick="closeModal('modal-model')">Cancelar</button></div></div></div>
+
+<div id="modal-photos" class="modal"><div class="modal-box"><div class="modal-title" id="modal-photos-title">Fotos</div><div class="photos-grid" id="photos-grid"></div><div><label class="upload-label">📁 Subir fotos<input type="file" accept="image/*" multiple id="photos-file" onchange="addPhotos(this)" style="display:none"></label></div><button class="btn btn-secondary" onclick="closeModal('modal-photos')">Cerrar</button></div></div>
+
+<div id="modal-public-upload" class="modal"><div class="modal-box"><div class="modal-title">Subir foto al catálogo</div><div><label>Quién la sube</label><input class="modal-input" id="public-uploader"></div><div><label>Fotos</label><div id="public-upload-preview"></div><label class="upload-label">📁 Seleccionar fotos<input type="file" accept="image/*" multiple id="public-gallery-file" onchange="publicPickPhotos(this)" style="display:none"></label></div><div><label>Máquina</label><input class="modal-input" id="public-machine-search" oninput="renderPublicMachineList()"><div id="public-machine-list"></div></div><div class="modal-btns"><button class="btn btn-primary" onclick="savePublicUpload()">Guardar</button><button class="btn btn-secondary" onclick="closeModal('modal-public-upload')">Cancelar</button></div></div></div>
+
+<!-- SCRIPTS -->
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/catalog.js"></script>
+<script src="js/quiz.js"></script>
+<script src="js/ranking.js"></script>
+<script src="js/admin.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

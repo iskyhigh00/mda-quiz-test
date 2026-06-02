@@ -1,0 +1,45 @@
+// ============================================
+// CONFIGURACIÓN Y VARIABLES GLOBALES
+// ============================================
+
+// Supabase
+const SB = 'https://etapmrnynqtqqjleujok.supabase.co';
+const KEY = 'sb_publishable_1GjAGxMyz7BTBa4NLVzAEw_-GPKqFCN';
+const BUCKET = 'mda-photos';
+const STORAGE_URL = SB + '/storage/v1/object/' + BUCKET + '/';
+const STORAGE_PUBLIC = SB + '/storage/v1/object/public/' + BUCKET + '/';
+
+// Variables globales
+let MACHINES = [];
+let adminUnlocked = false;
+let editingId = null;
+let photosEditingId = null;
+let modalNewFile = null;
+let cfg = { q: 5, t: 5 };
+let playerName = '';
+let publicUploadFiles = [];
+let publicUploadMachineId = null;
+
+// Quiz variables
+let qCorrect = 0, qWrong = 0, qScore = 0, qIdx = -1, qAnswered = false;
+let qQueue = [], qTotal = 0, qNum = 0, qStart = 0;
+let timerInt = null, autoTO = null;
+const CIRC = 131.9;
+const imgCache = {};
+
+// Competencia
+let compState = { active: false, endTime: null, prize: '', compId: '' };
+let compCountdownInt = null;
+
+// Max pts config
+let maxPtsConfig = { 5: 1000, 10: 1200, 20: 1300 };
+let resetConfig = { prize: '' };
+
+// Winners y notes mgmt
+let allWinnersMgmt = [];
+let allNotesMgmt = [];
+let allScoresMgmt = [];
+let editingScoreId = null;
+
+// Gallery
+let galleryPhotos = [], galleryIdx = 0, lbMachineId = null;
