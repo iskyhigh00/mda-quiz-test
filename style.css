@@ -1114,3 +1114,87 @@ tbody td {
   padding: 8px 12px;
   border-top: 1px solid var(--border);
 }
+/* Mejorar el formato del nombre en lightbox */
+.lb-name {
+  padding: 14px 20px;
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--gold);
+  background: rgba(0,0,0,0.2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Contador de fotos dentro del nombre */
+.lb-name .counter {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+/* Título DATOS CURIOSOS más visible */
+.lb-data-title {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  margin-top: 8px;
+  border-left: 3px solid var(--gold);
+  padding-left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lb-data-title::before {
+  content: "📝";
+  font-size: 0.85rem;
+}
+
+/* Mensaje "sin datos" mejor presentado */
+.no-data {
+  padding: 20px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-style: italic;
+  background: rgba(0,0,0,0.2);
+  border-radius: 10px;
+  margin: 8px 0;
+}
+
+/* Flechas de navegación del lightbox */
+#lb-nav button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+#lb-nav button:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+#lb-counter {
+  font-size: 0.85rem;
+  color: var(--gold);
+  font-weight: 600;
+  background: rgba(0,0,0,0.5);
+  padding: 6px 12px;
+  border-radius: 20px;
+}
