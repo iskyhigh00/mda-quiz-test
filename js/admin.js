@@ -31,7 +31,7 @@ function adminTab(tab) {
   if (panel) panel.style.display = '';
   document.querySelectorAll('.atab').forEach(t => t.classList.toggle('atab-active', t.getAttribute('onclick')?.includes(tab)));
   if (tab === 'modelos') renderAdmin();
-  if (tab === 'estadisticas') loadStats();
+  if (tab === 'estadisticas') { loadStats(); loadScoresMgmt(); }
   if (tab === 'historial') {
     loadSeasonList();
     loadWinnersMgmt();
@@ -610,6 +610,74 @@ async function deleteNote(id) {
     }
     allNotesMgmt = allNotesMgmt.filter(x => x.id !== id);
     renderNotesMgmt();
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+// ========== EDITAR PUNTAJES ==========
+let scoresMgmt = [];
+
+async function loadScoresMgmt() {
+  const list = document.getElementById('scores-mgmt-list');
+  if (!list) return;
+  list.innerHTML = '<div class="loading">Cargando...</div>';
+  try {
+    const season = currentSeason();
+    scoresMgmt = await sbGet('/rest/v1/scores?season=eq.' + encodeURIComponent(season) + '&order=pts.desc&limit=500');
+    renderScoresMgmt();
+  } catch (e) {
+    list.innerHTML = '<div class="no-data">Error: ' + e.message + '</div>';
+  }
+}
+
+function renderScoresMgmt() {
+  const list = document.getElementById('scores-mgmt-list');
+  if (!list) return;
+  const q = (document.getElementById('scores-search')?.value || '').toLowerCase();
+  const filtered = scoresMgmt.filter(s => (s.name || '').toLowerCase().includes(q));
+  if (!filtered.length) {
+    list.innerHTML = '<div class="no-data">Sin puntajes.</div>';
+    return;
+  }
+  list.innerHTML = '<table><thead><tr><th>Jugador</th><th>Puntaje</th><th>Prec.</th><th>Preguntas</th><th>Seg.</th><th>Fecha</th><th></th></tr></thead><tbody>' +
+    filtered.slice(0, 100).map(s => {
+      const d = new Date(s.created_at).toLocaleDateString('es-CL');
+      return '<tr><td><strong>' + s.name + '</strong></td>' +
+        '<td style="color:var(--gold);font-weight:800">' + s.pts + '</td>' +
+        '<td>' + (s.accuracy || 0) + '%</td>' +
+        '<td style="color:var(--accent2)">' + (s.total || '?') + '</td>' +
+        '<td>' + (s.timer_sec || '?') + 's</td>' +
+        '<td style="color:var(--muted)">' + d + '</td>' +
+        '<td style="white-space:nowrap"><button class="btn btn-secondary btn-sm" onclick="openEditScore(' + s.id + ',' + s.pts + ')">✏️</button> <button class="btn btn-danger btn-sm" onclick="deleteScore(' + s.id + ')">🗑️</button></td></tr>';
+    }).join('') +
+    '</tbody></table>';
+}
+
+async function openEditScore(id, currentPts) {
+  const newVal = prompt('Nuevo puntaje para esta partida:', currentPts);
+  if (newVal === null) return;
+  const pts = parseInt(newVal);
+  if (isNaN(pts) || pts < 0) { alert('Puntaje inválido.'); return; }
+  try {
+    const r = await sbPatch('/rest/v1/scores?id=eq.' + id, { pts });
+    if (!r.ok) { const e = await r.text(); alert('Error: ' + e); return; }
+    const s = scoresMgmt.find(x => x.id === id);
+    if (s) s.pts = pts;
+    renderScoresMgmt();
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+async function deleteScore(id) {
+  const s = scoresMgmt.find(x => x.id === id);
+  if (!confirm('¿Eliminar partida de ' + (s?.name || '?') + ' (' + s?.pts + ' pts)?')) return;
+  try {
+    const r = await sbDelete('/rest/v1/scores?id=eq.' + id);
+    if (!r.ok && r.status !== 204) { const e = await r.text(); alert('Error: ' + e); return; }
+    scoresMgmt = scoresMgmt.filter(x => x.id !== id);
+    renderScoresMgmt();
   } catch (e) {
     alert('Error: ' + e.message);
   }
