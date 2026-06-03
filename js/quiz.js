@@ -372,9 +372,10 @@ let _sdPts = 0;
 async function checkSuddenDeath(score) {
   if (!compState.active || !compState.compId || score <= 0) return score;
   try {
+    const maxPts = qTotal <= 5 ? (maxPtsConfig[5] || 1000) : qTotal <= 10 ? (maxPtsConfig[10] || 1200) : (maxPtsConfig[20] || 1300);
     const top = await sbGet('/rest/v1/scores?season=eq.' + encodeURIComponent(compState.compId) + '&completed=eq.true&order=pts.desc&limit=1');
     const topScore = top.length > 0 ? top[0].pts : 0;
-    if (score >= topScore) return await runSuddenDeath(score);
+    if (score >= topScore || score >= maxPts) return await runSuddenDeath(score);
   } catch (e) {}
   return score;
 }
@@ -411,8 +412,8 @@ function runSuddenDeath(baseScore) {
           finalScore = baseScore + _sdPts;
           resultEl.innerHTML = '<span style="color:var(--green)">✓ ¡Correcto!</span> <span style="color:var(--gold)">+' + _sdPts + ' pts → ' + finalScore + ' total</span>';
         } else {
-          finalScore = Math.max(0, baseScore - 100);
-          resultEl.innerHTML = '<span style="color:var(--red)">✗ Incorrecto · Era: <strong>' + machine.name + '</strong></span><br><span style="color:var(--red)">-100 pts → ' + finalScore + ' total</span>';
+          finalScore = baseScore;
+          resultEl.innerHTML = '<span style="color:var(--red)">✗ Incorrecto · Era: <strong>' + machine.name + '</strong></span><br><span style="color:var(--gold)">+0 pts → ' + finalScore + ' total</span>';
         }
         setTimeout(() => {
           document.getElementById('sd-overlay').classList.remove('open');
@@ -423,7 +424,7 @@ function runSuddenDeath(baseScore) {
     });
 
     const ptsEl = document.getElementById('sd-pts-val');
-    _sdPts = 300;
+    _sdPts = 5;
     ptsEl.textContent = _sdPts;
     ptsEl.className = 'sd-pts-val';
     document.getElementById('sd-overlay').classList.add('open');
@@ -431,20 +432,21 @@ function runSuddenDeath(baseScore) {
     _sdInterval = setInterval(() => {
       _sdPts = Math.max(0, _sdPts - 1);
       ptsEl.textContent = _sdPts;
-      if (_sdPts < 100) ptsEl.className = 'sd-pts-val critical';
-      else if (_sdPts < 200) ptsEl.className = 'sd-pts-val low';
+      if (_sdPts <= 1) ptsEl.className = 'sd-pts-val critical';
+      else if (_sdPts <= 3) ptsEl.className = 'sd-pts-val low';
+      else ptsEl.className = 'sd-pts-val';
       if (_sdPts === 0) {
         clearInterval(_sdInterval);
         optsEl.querySelectorAll('.opt').forEach(b => b.disabled = true);
-        const finalScore = Math.max(0, baseScore - 100);
+        const finalScore = baseScore;
         const resultEl = document.getElementById('sd-result');
         resultEl.style.display = 'block';
-        resultEl.innerHTML = '<span style="color:var(--red)">⏱ ¡Tiempo! Era: <strong>' + machine.name + '</strong></span><br><span style="color:var(--red)">-100 pts → ' + finalScore + ' total</span>';
+        resultEl.innerHTML = '<span style="color:var(--red)">⏱ ¡Tiempo! Era: <strong>' + machine.name + '</strong></span><br><span style="color:var(--gold)">+0 pts → ' + finalScore + ' total</span>';
         setTimeout(() => {
           document.getElementById('sd-overlay').classList.remove('open');
           resolve(finalScore);
         }, 2500);
       }
-    }, 30);
+    }, 400);
   });
 }
