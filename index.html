@@ -183,6 +183,8 @@
 
 <div id="modal-public-upload" class="modal"><div class="modal-box"><div class="modal-title">Subir foto al catálogo</div><div><label>Quién la sube</label><input class="modal-input" id="public-uploader"></div><div><label>Fotos</label><div id="public-upload-preview"></div><label class="upload-label">📁 Seleccionar fotos<input type="file" accept="image/*" multiple id="public-gallery-file" onchange="publicPickPhotos(this)" style="display:none"></label></div><div><label>Máquina</label><input class="modal-input" id="public-machine-search" oninput="renderPublicMachineList()"><div id="public-machine-list"></div></div><div id="public-upload-progress" style="display:none;font-size:0.78rem;color:var(--accent2);margin:8px 0;"></div><div class="modal-btns"><button class="btn btn-primary" onclick="savePublicUpload()">Guardar</button><button class="btn btn-secondary" onclick="closeModal('modal-public-upload')">Cancelar</button></div></div></div>
 
+<div id="sd-overlay"><div class="sd-box"><div class="sd-header">⚡ DESEMPATE</div><div class="sd-sub">¡Igualas el mejor puntaje! Responde rápido — puntos bajando.</div><div class="sd-pts-wrap"><span class="sd-pts-label">puntos disponibles</span><span class="sd-pts-val" id="sd-pts-val">300</span></div><div class="sd-img-wrap"><img id="sd-img" src="" draggable="false"></div><div class="sd-opts" id="sd-opts"></div><div class="sd-result" id="sd-result" style="display:none"></div></div></div>
+
 <!-- SCRIPTS -->
 <script src="js/config.js"></script>
 <script src="js/api.js"></script>
