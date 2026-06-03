@@ -129,6 +129,10 @@
 
 <!-- VISTA ADMIN (simplificada) -->
 <div id="view-admin" class="view">
+  <div class="palette-bar">
+    <span class="palette-bar-label">🎨 Paleta de colores</span>
+    <select id="palette-select" class="palette-select" onchange="applyPalette(this.value)"></select>
+  </div>
   <div style="display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap;border-bottom:1px solid var(--border);">
     <div class="atab atab-active" onclick="adminTab('competencia')">🏆 Competencia</div>
     <div class="atab" onclick="adminTab('modelos')">🎰 Modelos</div>
