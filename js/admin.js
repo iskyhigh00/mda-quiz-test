@@ -521,7 +521,7 @@ async function loadSeasonData() {
     body.innerHTML = '<table><thead><tr><th>#</th><th>Jugador</th><th>Mejor puntaje</th><th>Preguntas</th><th>Prec.</th><th>Seg.</th><th>Fecha</th></tr></thead><tbody>' +
       top.map((x, i) => {
         const f = new Date(x.created_at).toLocaleDateString('es-CL');
-        return '<tr class="rank-' + (i + 1) + '"><tr>' + (M[i] || i + 1) + '</td><td><strong>' + x.name + '</strong></td><td style="color:var(--gold);font-weight:800">' + x.pts + '</td><td style="color:var(--accent2);font-size:0.78rem;">' + (x.total || '?') + '</td><td>' + (x.accuracy || 0) + '%</td><td>' + (x.timer_sec || '?') + 's</td><td style="color:var(--muted)">' + f + '</td></tr>';
+        return '<tr class="rank-' + (i + 1) + '"><td>' + (M[i] || i + 1) + '</td><td><strong>' + x.name + '</strong></td><td style="color:var(--gold);font-weight:800">' + x.pts + '</td><td style="color:var(--accent2);font-size:0.78rem;">' + (x.total || '?') + '</td><td>' + (x.accuracy || 0) + '%</td><td>' + (x.timer_sec || '?') + 's</td><td style="color:var(--muted)">' + f + '</td></tr>';
       }).join('') + '</tbody></table>';
   } catch (e) {
     body.innerHTML = '<div class="no-data">Error: ' + e.message + '</div>';
@@ -539,7 +539,7 @@ async function loadWinnersMgmt() {
       list.innerHTML = '<div class="no-data">Sin ganadores.</div>';
       return;
     }
-    list.innerHTML = '<td><thead><tr><th>Fecha</th><th>Ganador</th><th>Puntaje</th><th>Premio</th><th></th></tr></thead><tbody>' +
+    list.innerHTML = '<table><thead><tr><th>Fecha</th><th>Ganador</th><th>Puntaje</th><th>Premio</th><th></th></tr></thead><tbody>' +
       winners.map(w => '<tr><td>' + w.reset_date + '</td><td><strong>' + w.player_name + '</strong></td><td style="color:var(--gold);font-weight:800">' + w.pts + '</td><td>' + (w.prize || '-') + '</td><td><button class="btn btn-danger btn-sm" onclick="deleteWinner(' + w.id + ')">🗑️</button></td></tr>').join('') +
       '</tbody></table>';
   } catch (e) {

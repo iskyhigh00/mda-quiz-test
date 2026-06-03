@@ -52,7 +52,7 @@ async function loadRanking() {
       body.innerHTML = '<table><thead><tr><th>#</th><th>Nombre</th><th>Mejor puntaje</th><th>Preguntas</th><th>Prec.</th><th>Seg.</th><th>Fecha</th></tr></thead><tbody>' +
         top.map((x, i) => {
           const f = new Date(x.created_at).toLocaleDateString('es-CL');
-          return '<tr class="rank-' + (i + 1) + '"><tr>' + (M[i] || i + 1) + '</td><td><strong>' + x.name + '</strong></td><td style="color:var(--gold);font-weight:800">' + x.pts + '</td><td style="color:var(--accent2);font-size:0.78rem;">' + (x.total || '?') + '</td><td>' + (x.accuracy || 0) + '%</td><td>' + (x.timer_sec || '?') + 's</td><td style="color:var(--muted)">' + f + '</td></tr>';
+          return '<tr class="rank-' + (i + 1) + '"><td>' + (M[i] || i + 1) + '</td><td><strong>' + x.name + '</strong></td><td style="color:var(--gold);font-weight:800">' + x.pts + '</td><td style="color:var(--accent2);font-size:0.78rem;">' + (x.total || '?') + '</td><td>' + (x.accuracy || 0) + '%</td><td>' + (x.timer_sec || '?') + 's</td><td style="color:var(--muted)">' + f + '</td></tr>';
         }).join('') + '</tbody></table>';
     } else {
       const r = await sbFetch('/rest/v1/scores?season=eq.practica&completed=eq.true&order=created_at.desc&limit=30');
@@ -63,7 +63,7 @@ async function loadRanking() {
         return;
       }
       body.innerHTML = '<div style="padding:8px 14px;font-size:0.75rem;color:var(--muted);border-bottom:1px solid var(--border);">📚 Últimas partidas de práctica (por fecha)</div>' +
-        '<td><thead><tr><th>Nombre</th><th>Puntaje</th><th>Preguntas</th><th>Prec.</th><th>Seg.</th><th>Fecha y hora</th></tr></thead><tbody>' +
+        '<table><thead><tr><th>Nombre</th><th>Puntaje</th><th>Preguntas</th><th>Prec.</th><th>Seg.</th><th>Fecha y hora</th></tr></thead><tbody>' +
         s.map(x => {
           const d = new Date(x.created_at);
           const f = d.toLocaleDateString('es-CL');
