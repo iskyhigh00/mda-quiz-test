@@ -275,7 +275,9 @@ nav {
   max-height: 92vh;
   overflow-y: auto;
   animation: popIn 0.2s ease;
+  scrollbar-width: none;
 }
+.lb-box::-webkit-scrollbar { display: none; }
 @keyframes popIn {
   from { transform: scale(0.85); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
