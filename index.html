@@ -29,6 +29,7 @@
 
 <!-- VISTA CATÁLOGO -->
 <div id="view-catalog" class="view">
+  <div class="user-bar"><span id="user-bar-name" class="user-bar-name"></span><button class="user-bar-btn" onclick="changeName()">✏️ Cambiar nombre</button></div>
   <div class="search-row">
     <input class="search-input" id="search" placeholder="Buscar modelo..." oninput="filterCatalog()">
     <span class="badge" id="cat-count">Cargando...</span>
@@ -140,10 +141,10 @@
         <div><label class="form-label">Horas</label><input class="modal-input" id="comp-hours" type="number" value="0"></div>
         <div><label class="form-label">Minutos</label><input class="modal-input" id="comp-minutes" type="number" value="0"></div></div>
         <div id="comp-info"></div>
-        <div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-primary" onclick="startCompetition()">▶ Iniciar competencia</button>
-        <button class="btn btn-secondary" onclick="updateCompetitionPrize()" style="display:none;">✏️ Actualizar premio</button>
-        <button class="btn btn-secondary" onclick="addCompetitionTime()" style="display:none;">+ Agregar tiempo</button>
-        <button class="btn btn-danger" onclick="stopCompetition()" style="display:none;">⏹ Detener ahora</button></div>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;"><button id="comp-start-btn" class="btn btn-primary" onclick="startCompetition()">▶ Iniciar competencia</button>
+        <button id="comp-updateprize-btn" class="btn btn-secondary" onclick="updateCompetitionPrize()" style="display:none;">✏️ Actualizar premio</button>
+        <button id="comp-addtime-btn" class="btn btn-secondary" onclick="addCompetitionTime()" style="display:none;">+ Agregar tiempo</button>
+        <button id="comp-stop-btn" class="btn btn-danger" onclick="stopCompetition()" style="display:none;">⏹ Detener ahora</button></div>
       </div>
     </div>
     <div class="section-box"><div class="section-head">🎯 Puntaje máximo por preguntas <button class="btn btn-primary btn-sm" onclick="saveMaxPts()">Guardar</button></div>
