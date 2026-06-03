@@ -15,18 +15,19 @@ input, textarea {
   --card: #1a1a2e;
   --accent: #7c3aed;
   --accent2: #06b6d4;
-  --gold: #f59e0b;
+  --gold: #c8a850;
   --green: #10b981;
   --red: #ef4444;
-  --text: #e2e8f0;
+  --text: #e8e4f0;
   --muted: #64748b;
   --border: #2d2d4e;
 }
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
   min-height: 100vh;
+  letter-spacing: 0.01em;
 }
 /* NAV - Oculto por defecto */
 nav {
@@ -97,8 +98,9 @@ nav {
 }
 .welcome-title {
   font-size: 1.4rem;
-  font-weight: 900;
+  font-weight: 700;
   color: var(--accent2);
+  letter-spacing: 0.03em;
   margin-bottom: 8px;
 }
 .welcome-sub {
@@ -237,11 +239,11 @@ nav {
 }
 .card-label {
   padding: 9px 8px;
-  font-weight: 700;
+  font-weight: 500;
   font-size: 0.75rem;
   text-align: center;
   background: linear-gradient(180deg, var(--card), #0f0f1a);
-  color: var(--accent2);
+  color: var(--text);
 }
 /* Lightbox */
 #lightbox {
@@ -439,10 +441,11 @@ nav {
   padding: 26px;
 }
 .setup-card h2 {
-  font-size: 1.2rem;
-  font-weight: 800;
-  color: var(--accent2);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text);
   margin-bottom: 4px;
+  letter-spacing: 0.02em;
 }
 .setup-card p {
   font-size: 0.8rem;
@@ -481,14 +484,29 @@ nav {
 }
 .chip {
   padding: 8px 15px;
-  border-radius: 20px;
+  border-radius: 12px;
   border: 2px solid var(--border);
   background: var(--surface);
   color: var(--muted);
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.18s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.chip-n {
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.chip-pts {
+  font-size: 0.58rem;
+  font-weight: 400;
+  opacity: 0.7;
+  letter-spacing: 0.02em;
 }
 .chip:hover {
   border-color: var(--accent2);
@@ -498,6 +516,9 @@ nav {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
+}
+.chip.active .chip-pts {
+  opacity: 0.85;
 }
 .start-btn {
   width: 100%;
@@ -549,7 +570,8 @@ nav {
 }
 .qstat-val {
   font-size: 1.1rem;
-  font-weight: 800;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 .qstat-lbl {
   font-size: 0.62rem;
@@ -756,10 +778,14 @@ nav {
 }
 .r-score {
   font-size: 3.8rem;
-  font-weight: 900;
-  color: var(--gold);
+  font-weight: 800;
   line-height: 1;
   animation: popIn 0.5s ease;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
 }
 .r-sub {
   font-size: 0.8rem;
@@ -903,11 +929,12 @@ nav {
   border-bottom: 1px solid var(--border);
   background: var(--surface);
   font-size: 0.82rem;
-  font-weight: 800;
-  color: var(--accent2);
+  font-weight: 600;
+  color: var(--text);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  letter-spacing: 0.02em;
 }
 .model-row {
   display: flex;
@@ -989,8 +1016,9 @@ nav {
 }
 .stat-card-val {
   font-size: 1.8rem;
-  font-weight: 900;
+  font-weight: 700;
   margin-bottom: 2px;
+  letter-spacing: 0.01em;
 }
 .stat-card-lbl {
   font-size: 0.7rem;
@@ -1047,9 +1075,10 @@ nav {
 }
 .modal-title {
   font-size: 1rem;
-  font-weight: 800;
-  color: var(--accent2);
+  font-weight: 600;
+  color: var(--text);
   margin-bottom: 14px;
+  letter-spacing: 0.02em;
 }
 .modal-group {
   margin-bottom: 13px;
@@ -1177,16 +1206,17 @@ tbody td {
 }
 /* Mejorar el formato del nombre en lightbox */
 .lb-name {
-  padding: 14px 20px;
+  padding: 12px 20px;
   text-align: center;
-  font-size: 1.2rem;
-  font-weight: 800;
-  color: var(--gold);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text);
   background: rgba(0,0,0,0.2);
   border-bottom: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   gap: 4px;
+  letter-spacing: 0.02em;
 }
 
 /* Contador de fotos dentro del nombre */
@@ -1282,8 +1312,11 @@ tbody td {
 }
 .sd-header {
   font-size: 2rem;
-  font-weight: 900;
-  color: var(--gold);
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   letter-spacing: 5px;
   text-align: center;
   animation: sdPulse 0.9s ease-in-out infinite;
@@ -1400,6 +1433,7 @@ tbody td {
   }
   .r-score {
     font-size: 2.8rem;
+    letter-spacing: -0.01em;
   }
   .stats-grid {
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
