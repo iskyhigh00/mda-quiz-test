@@ -46,6 +46,7 @@ function buildCatalog() {
     const c = document.createElement('div');
     c.className = 'card';
     c.dataset.name = m.name.toLowerCase();
+    c.dataset.machineId = m.id;
     const allPhotos = [...new Set([m.photo_url, ...(m.photo_urls || []).map(photoUrl)].filter(Boolean))];
     const badge = allPhotos.length > 1 ? '<span style="position:absolute;top:6px;right:6px;background:var(--accent);color:#fff;font-size:0.6rem;font-weight:800;padding:2px 7px;border-radius:10px;">' + allPhotos.length + ' 📷</span>' : '';
     const ih = m.photo_url
@@ -56,6 +57,43 @@ function buildCatalog() {
     g.appendChild(c);
   });
   filterCatalog();
+  startCatalogSlideshow();
+}
+
+// ===== AUTO-SLIDESHOW =====
+let _slideInterval = null;
+const _slidePhotos = new Map();
+const _slideIdx = new Map();
+
+function startCatalogSlideshow() {
+  stopCatalogSlideshow();
+  _slidePhotos.clear();
+  _slideIdx.clear();
+  MACHINES.forEach(m => {
+    const all = [...new Set([m.photo_url, ...(m.photo_urls || []).map(photoUrl)].filter(Boolean))];
+    if (all.length > 1) {
+      _slidePhotos.set(String(m.id), all);
+      _slideIdx.set(String(m.id), Math.floor(Math.random() * all.length));
+    }
+  });
+  if (_slidePhotos.size === 0) return;
+  const ids = [..._slidePhotos.keys()];
+  _slideInterval = setInterval(() => {
+    const id = ids[Math.floor(Math.random() * ids.length)];
+    const photos = _slidePhotos.get(id);
+    const next = (_slideIdx.get(id) + 1) % photos.length;
+    _slideIdx.set(id, next);
+    const card = document.querySelector('.card[data-machine-id="' + id + '"]');
+    if (!card || card.style.display === 'none') return;
+    const img = card.querySelector('.card-img img');
+    if (!img) return;
+    img.style.opacity = '0';
+    setTimeout(() => { img.src = getImgUrl(photos[next]); img.style.opacity = '1'; }, 220);
+  }, 2200);
+}
+
+function stopCatalogSlideshow() {
+  if (_slideInterval) { clearInterval(_slideInterval); _slideInterval = null; }
 }
 
 function filterCatalog() {

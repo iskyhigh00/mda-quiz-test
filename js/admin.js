@@ -2,6 +2,44 @@
 // ADMIN: MODELOS, FOTOS, ESTADÍSTICAS, HISTORIAL
 // ============================================
 
+// ===== PALETAS DE COLORES =====
+const COLOR_PALETTES = {
+  noche:     { name: 'Noche',     '--bg':'#0a0a12','--surface':'#12121e','--card':'#1a1a2e','--accent':'#7c3aed','--accent2':'#06b6d4','--gold':'#c8a850','--green':'#10b981','--red':'#ef4444','--text':'#e8e4f0','--muted':'#64748b','--border':'#2d2d4e' },
+  casino:    { name: 'Casino',    '--bg':'#0d0505','--surface':'#170909','--card':'#1f0e0e','--accent':'#c41c1c','--accent2':'#d97706','--gold':'#d4a847','--green':'#15803d','--red':'#ef4444','--text':'#f4ede8','--muted':'#856060','--border':'#3d1414' },
+  neon:      { name: 'Neón',      '--bg':'#050508','--surface':'#0c0c18','--card':'#121228','--accent':'#d946ef','--accent2':'#22d3ee','--gold':'#fbbf24','--green':'#4ade80','--red':'#fb7185','--text':'#f0e4f8','--muted':'#6b7280','--border':'#2a2040' },
+  esmeralda: { name: 'Esmeralda', '--bg':'#03100a','--surface':'#071a0e','--card':'#0d2415','--accent':'#16a34a','--accent2':'#2dd4bf','--gold':'#c8a850','--green':'#4ade80','--red':'#f87171','--text':'#e4f0ea','--muted':'#4d7a5e','--border':'#153d24' },
+  zafiro:    { name: 'Zafiro',    '--bg':'#04060f','--surface':'#080c1a','--card':'#0e1326','--accent':'#2563eb','--accent2':'#38bdf8','--gold':'#c8a850','--green':'#34d399','--red':'#f87171','--text':'#e2e8f8','--muted':'#4a5568','--border':'#162040' },
+  onix:      { name: 'Ónix',      '--bg':'#060606','--surface':'#0e0e12','--card':'#14141c','--accent':'#6d28d9','--accent2':'#a78bfa','--gold':'#c8a850','--green':'#22c55e','--red':'#f87171','--text':'#e4e0f4','--muted':'#5a5572','--border':'#242038' },
+  granate:   { name: 'Granate',   '--bg':'#0c0508','--surface':'#180a10','--card':'#220e18','--accent':'#9f1239','--accent2':'#fb7185','--gold':'#c8a850','--green':'#4ade80','--red':'#fb7185','--text':'#f0e4ea','--muted':'#7a4d5e','--border':'#3d1428' },
+  indigo:    { name: 'Índigo',    '--bg':'#06060e','--surface':'#0c0c1a','--card':'#121226','--accent':'#4338ca','--accent2':'#818cf8','--gold':'#c8a850','--green':'#34d399','--red':'#f87171','--text':'#e4e2f4','--muted':'#555080','--border':'#201e40' },
+  ambar:     { name: 'Ámbar',     '--bg':'#0e0a04','--surface':'#1a1008','--card':'#241808','--accent':'#b45309','--accent2':'#fbbf24','--gold':'#f59e0b','--green':'#16a34a','--red':'#ef4444','--text':'#f4ece0','--muted':'#7a6840','--border':'#3d2e10' },
+  cromo:     { name: 'Cromo',     '--bg':'#080808','--surface':'#101014','--card':'#18181e','--accent':'#6366f1','--accent2':'#94a3b8','--gold':'#c8a850','--green':'#34d399','--red':'#f87171','--text':'#e8e8f0','--muted':'#5a5a70','--border':'#28283a' },
+};
+
+function applyPalette(key) {
+  const p = COLOR_PALETTES[key];
+  if (!p) return;
+  const root = document.documentElement;
+  Object.keys(p).forEach(k => { if (k.startsWith('--')) root.style.setProperty(k, p[k]); });
+  localStorage.setItem('mda_palette', key);
+  const sel = document.getElementById('palette-select');
+  if (sel && sel.value !== key) sel.value = key;
+}
+
+function loadSavedPalette() {
+  applyPalette(localStorage.getItem('mda_palette') || 'noche');
+}
+
+function renderPaletteSelect() {
+  const sel = document.getElementById('palette-select');
+  if (!sel) return;
+  const current = localStorage.getItem('mda_palette') || 'noche';
+  sel.innerHTML = Object.keys(COLOR_PALETTES).map(k =>
+    '<option value="' + k + '"' + (k === current ? ' selected' : '') + '>' + COLOR_PALETTES[k].name + '</option>'
+  ).join('');
+}
+document.addEventListener('DOMContentLoaded', renderPaletteSelect);
+
 async function adminLogin() {
   if (adminUnlocked) {
     goTo('admin');
