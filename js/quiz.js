@@ -374,8 +374,8 @@ async function checkSuddenDeath(score) {
   try {
     const maxPts = qTotal <= 5 ? (maxPtsConfig[5] || 1000) : qTotal <= 10 ? (maxPtsConfig[10] || 1200) : (maxPtsConfig[20] || 1300);
     const top = await sbGet('/rest/v1/scores?season=eq.' + encodeURIComponent(compState.compId) + '&completed=eq.true&order=pts.desc&limit=1');
-    const topScore = top.length > 0 ? top[0].pts : 0;
-    if (score >= topScore || score >= maxPts) return await runSuddenDeath(score);
+    const tiesFirst = top.length > 0 && score >= top[0].pts;
+    if (tiesFirst || score >= maxPts) return await runSuddenDeath(score);
   } catch (e) {}
   return score;
 }
