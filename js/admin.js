@@ -354,6 +354,7 @@ async function loadMaxPts() {
       const el = document.getElementById('max-pts-' + q);
       if (el) el.value = maxPtsConfig[q];
     });
+    if (typeof updateSetupChips === 'function') updateSetupChips();
   } catch (e) {
     console.error('loadMaxPts:', e);
   }
@@ -370,6 +371,7 @@ async function saveMaxPts() {
       sbFetch('/rest/v1/settings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify({ key: 'max_pts_' + q, value: String(vals[q]) }) })
     ));
     maxPtsConfig = vals;
+    if (typeof updateSetupChips === 'function') updateSetupChips();
     alert('Guardado.');
   } catch (e) {
     alert('Error: ' + e.message);

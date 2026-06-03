@@ -8,6 +8,13 @@ function pickChip(g, v, el) {
   el.classList.add('active');
 }
 
+function updateSetupChips() {
+  [5, 10, 20].forEach(q => {
+    const el = document.getElementById('chip-pts-' + q);
+    if (el) el.textContent = '≤ ' + (maxPtsConfig[q] || (q === 5 ? 1000 : q === 10 ? 1200 : 1300)) + ' pts';
+  });
+}
+
 function vipMult() {
   return playerName.trim().toLowerCase() === 'messa' ? 1.3 : 1;
 }
