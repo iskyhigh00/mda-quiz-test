@@ -1257,6 +1257,105 @@ tbody td {
   color: #fff;
 }
 
+/* ===== MUERTE SÚBITA ===== */
+#sd-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  background: #03030a;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+#sd-overlay.open {
+  display: flex;
+}
+.sd-box {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.sd-header {
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--gold);
+  letter-spacing: 5px;
+  text-align: center;
+  animation: sdPulse 0.9s ease-in-out infinite;
+}
+@keyframes sdPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.75; transform: scale(0.97); }
+}
+.sd-sub {
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-align: center;
+}
+.sd-pts-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+.sd-pts-label {
+  font-size: 0.65rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 2px;
+}
+.sd-pts-val {
+  font-size: 3.8rem;
+  font-weight: 900;
+  color: var(--accent2);
+  font-variant-numeric: tabular-nums;
+  transition: color 0.4s;
+  min-width: 4ch;
+  text-align: center;
+}
+.sd-pts-val.low { color: var(--gold); }
+.sd-pts-val.critical { color: var(--red); }
+.sd-img-wrap {
+  width: 100%;
+  background: #0a0a14;
+  border-radius: 14px;
+  border: 2px solid var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  max-height: 240px;
+  overflow: hidden;
+}
+.sd-img-wrap img {
+  max-height: 240px;
+  max-width: 100%;
+  object-fit: contain;
+}
+.sd-opts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+}
+.sd-result {
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  width: 100%;
+  line-height: 1.6;
+}
+
 /* ===== RESPONSIVE MOBILE ===== */
 @media (max-width: 600px) {
   nav {

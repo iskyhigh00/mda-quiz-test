@@ -342,20 +342,109 @@ async function endQuiz() {
   clearTimers();
   const acc = Math.round(qCorrect / qTotal * 100);
   const trophies = ['🏆', '🥈', '🥉', '💪'];
-  document.getElementById('r-trophy').innerHTML = acc >= 90 ? trophies[0] : acc >= 70 ? trophies[1] : acc >= 50 ? trophies[2] : trophies[3];
+  const trophy = acc >= 90 ? trophies[0] : acc >= 70 ? trophies[1] : acc >= 50 ? trophies[2] : trophies[3];
   document.getElementById('r-name').textContent = playerName;
-  
+
   const targetMax = qTotal <= 5 ? (maxPtsConfig[5] || 1000) : qTotal <= 10 ? (maxPtsConfig[10] || 1200) : (maxPtsConfig[20] || 1300);
-  const normalizedScore = Math.round(qScore * targetMax / (qTotal * 100));
-  
+  let normalizedScore = Math.round(qScore * targetMax / (qTotal * 100));
+
   document.getElementById('r-sub').textContent = qCorrect + ' correctas de ' + qTotal + ' · ' + cfg.t + 's';
   document.getElementById('r-ok').textContent = qCorrect;
   document.getElementById('r-err').textContent = qWrong;
   document.getElementById('r-acc').textContent = acc + '%';
+
+  // Desempate antes de mostrar resultado
+  normalizedScore = await checkSuddenDeath(normalizedScore);
+
+  document.getElementById('r-trophy').innerHTML = trophy;
   document.getElementById('r-score').textContent = normalizedScore;
-  
+
   await saveScore(playerName, normalizedScore, qCorrect, cfg.q, cfg.t, acc);
   if (typeof renderLeaderboard === 'function') renderLeaderboard();
   if (typeof loadRanking === 'function') loadRanking();
   goTo('results');
+}
+
+// ========== MUERTE SÚBITA ==========
+let _sdInterval = null;
+let _sdPts = 0;
+
+async function checkSuddenDeath(score) {
+  if (!compState.active || !compState.compId || score <= 0) return score;
+  try {
+    const top = await sbGet('/rest/v1/scores?season=eq.' + encodeURIComponent(compState.compId) + '&completed=eq.true&order=pts.desc&limit=1');
+    const topScore = top.length > 0 ? top[0].pts : 0;
+    if (score >= topScore) return await runSuddenDeath(score);
+  } catch (e) {}
+  return score;
+}
+
+function runSuddenDeath(baseScore) {
+  return new Promise(resolve => {
+    const usedIds = new Set(qQueue.map(i => MACHINES[i]?.id));
+    const pool = MACHINES.filter(m => m.photo_url);
+    const fresh = pool.filter(m => !usedIds.has(m.id));
+    const candidates = fresh.length >= 4 ? fresh : pool;
+    if (candidates.length < 4) { resolve(baseScore); return; }
+
+    const machine = candidates[Math.floor(Math.random() * candidates.length)];
+    const wrongs = shuffle(candidates.filter(m => m.id !== machine.id)).slice(0, 3);
+    const opts = shuffle([machine, ...wrongs]);
+
+    document.getElementById('sd-img').src = getImgUrl(machine.photo_url);
+    document.getElementById('sd-result').style.display = 'none';
+
+    const optsEl = document.getElementById('sd-opts');
+    optsEl.innerHTML = '';
+    opts.forEach(m => {
+      const btn = document.createElement('button');
+      btn.className = 'opt';
+      btn.textContent = m.name;
+      btn.onclick = () => {
+        clearInterval(_sdInterval);
+        optsEl.querySelectorAll('.opt').forEach(b => b.disabled = true);
+        const correct = m.id === machine.id;
+        const resultEl = document.getElementById('sd-result');
+        resultEl.style.display = 'block';
+        let finalScore;
+        if (correct) {
+          finalScore = baseScore + _sdPts;
+          resultEl.innerHTML = '<span style="color:var(--green)">✓ ¡Correcto!</span> <span style="color:var(--gold)">+' + _sdPts + ' pts → ' + finalScore + ' total</span>';
+        } else {
+          finalScore = Math.max(0, baseScore - 100);
+          resultEl.innerHTML = '<span style="color:var(--red)">✗ Incorrecto · Era: <strong>' + machine.name + '</strong></span><br><span style="color:var(--red)">-100 pts → ' + finalScore + ' total</span>';
+        }
+        setTimeout(() => {
+          document.getElementById('sd-overlay').classList.remove('open');
+          resolve(finalScore);
+        }, 2500);
+      };
+      optsEl.appendChild(btn);
+    });
+
+    const ptsEl = document.getElementById('sd-pts-val');
+    _sdPts = 300;
+    ptsEl.textContent = _sdPts;
+    ptsEl.className = 'sd-pts-val';
+    document.getElementById('sd-overlay').classList.add('open');
+
+    _sdInterval = setInterval(() => {
+      _sdPts = Math.max(0, _sdPts - 1);
+      ptsEl.textContent = _sdPts;
+      if (_sdPts < 100) ptsEl.className = 'sd-pts-val critical';
+      else if (_sdPts < 200) ptsEl.className = 'sd-pts-val low';
+      if (_sdPts === 0) {
+        clearInterval(_sdInterval);
+        optsEl.querySelectorAll('.opt').forEach(b => b.disabled = true);
+        const finalScore = Math.max(0, baseScore - 100);
+        const resultEl = document.getElementById('sd-result');
+        resultEl.style.display = 'block';
+        resultEl.innerHTML = '<span style="color:var(--red)">⏱ ¡Tiempo! Era: <strong>' + machine.name + '</strong></span><br><span style="color:var(--red)">-100 pts → ' + finalScore + ' total</span>';
+        setTimeout(() => {
+          document.getElementById('sd-overlay').classList.remove('open');
+          resolve(finalScore);
+        }, 2500);
+      }
+    }, 30);
+  });
 }
