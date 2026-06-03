@@ -104,11 +104,7 @@ function renderGalleryPhoto() {
   nameEl.dataset.baseName = base;
   
   // Mostrar contador de fotos de forma separada
-  if (galleryPhotos.length > 1) {
-    nameEl.innerHTML = `<span class="counter">📷 ${galleryIdx + 1} / ${galleryPhotos.length}</span><span>${base}</span>`;
-  } else {
-    nameEl.innerHTML = `<span>${base}</span>`;
-  }
+  nameEl.textContent = base;
   
   const by = photoBy(current);
   const at = photoAt(current);
@@ -167,16 +163,22 @@ window.addEventListener('popstate', () => {
   }
 });
 
-// Swipe touch para galería
+// Swipe touch para galería (evita scroll del fondo)
 let _lbTouchX = 0;
+let _lbTouchY = 0;
 (function initLbSwipe() {
-  document.addEventListener('touchstart', e => {
-    if (document.getElementById('lightbox')?.classList.contains('open')) {
-      _lbTouchX = e.touches[0].clientX;
-    }
+  const lb = document.getElementById('lightbox');
+  if (!lb) return;
+  lb.addEventListener('touchstart', e => {
+    _lbTouchX = e.touches[0].clientX;
+    _lbTouchY = e.touches[0].clientY;
   }, { passive: true });
-  document.addEventListener('touchend', e => {
-    if (!document.getElementById('lightbox')?.classList.contains('open')) return;
+  lb.addEventListener('touchmove', e => {
+    const dx = Math.abs(e.touches[0].clientX - _lbTouchX);
+    const dy = Math.abs(e.touches[0].clientY - _lbTouchY);
+    if (dx > dy && dx > 10) e.preventDefault();
+  }, { passive: false });
+  lb.addEventListener('touchend', e => {
     if (galleryPhotos.length <= 1) return;
     const dx = _lbTouchX - e.changedTouches[0].clientX;
     if (Math.abs(dx) > 44) galleryNav(dx > 0 ? 1 : -1);

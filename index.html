@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MDAs Casino</title>
+<meta name="theme-color" content="#7c3aed">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MDAs">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon.svg">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -39,15 +46,10 @@
 
 <!-- VISTA SETUP QUIZ -->
 <div id="view-setup" class="view">
-  <div style="text-align:right;padding:4px 0 0;"><button onclick="changeName()" style="font-size:0.7rem;background:none;border:none;color:var(--muted);cursor:pointer;text-decoration:underline;">Cambiar nombre</button></div>
   <div class="setup-card">
     <h2>⚙️ Configurar Quiz</h2>
     <p>5 segundos premia más la velocidad. 10 segundos da más tiempo para pensar.</p>
     <div id="no-img-warn" class="warn-box">No hay modelos con foto. Agrega fotos desde Admin.</div>
-    <div class="form-group">
-      <label class="form-label">Tu nombre</label>
-      <input class="name-input" id="player-name" placeholder="Escribe tu nombre..." maxlength="20">
-    </div>
     <div class="form-group">
       <label class="form-label">Número de preguntas</label>
       <div class="chips">
