@@ -262,16 +262,10 @@ async function preloadAndCountdown(pl) {
 }
 
 function startQuiz() {
-  playerName = document.getElementById('player-name').value.trim();
+  playerName = playerName || localStorage.getItem('mda_user_name') || '';
   if (!playerName) {
-    const inp = document.getElementById('player-name');
-    inp.style.borderColor = 'var(--red)';
-    inp.focus();
-    inp.placeholder = 'Debes escribir tu nombre';
-    setTimeout(() => {
-      inp.style.borderColor = '';
-      inp.placeholder = 'Escribe tu nombre...';
-    }, 2500);
+    alert('Primero configura tu nombre en el catálogo.');
+    goTo('catalog');
     return;
   }
   const pl = MACHINES.filter(m => m.photo_url);
