@@ -254,6 +254,40 @@ nav {
   align-items: center;
   justify-content: center;
   min-height: 160px;
+  position: relative;
+}
+.lb-arr {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.42);
+  border: none;
+  color: rgba(255, 255, 255, 0.88);
+  width: 36px;
+  height: 64px;
+  font-size: 1.7rem;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  transition: background 0.2s;
+  line-height: 1;
+  padding: 0;
+}
+.lb-arr:hover {
+  background: rgba(0, 0, 0, 0.65);
+}
+.lb-arr.visible {
+  display: flex;
+}
+.lb-arr-l {
+  left: 0;
+  border-radius: 0 8px 8px 0;
+}
+.lb-arr-r {
+  right: 0;
+  border-radius: 8px 0 0 8px;
 }
 .lb-img img {
   max-height: 340px;
@@ -1199,33 +1233,52 @@ tbody td {
   color: #fff;
 }
 
-/* Flechas de navegación del lightbox */
-#lb-nav button {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text);
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  font-size: 1.5rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-
-#lb-nav button:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
-
-#lb-counter {
-  font-size: 0.85rem;
-  color: var(--gold);
-  font-weight: 600;
-  background: rgba(0,0,0,0.5);
-  padding: 6px 12px;
-  border-radius: 20px;
+/* ===== RESPONSIVE MOBILE ===== */
+@media (max-width: 600px) {
+  nav {
+    overflow-x: hidden;
+  }
+  .nav-tab {
+    flex: 1;
+    padding: 13px 4px;
+    font-size: 0.7rem;
+    text-align: center;
+  }
+  .view {
+    padding: 14px 12px;
+  }
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 8px;
+  }
+  .section-box {
+    overflow-x: auto;
+  }
+  table {
+    min-width: 460px;
+  }
+  .lb-box {
+    width: 96%;
+    max-height: 96vh;
+  }
+  .quiz-img img {
+    max-height: 26vh;
+  }
+  .opts {
+    gap: 6px;
+    padding: 6px 12px 12px;
+  }
+  .opt {
+    font-size: 0.72rem;
+    padding: 10px 6px;
+  }
+  .setup-card {
+    padding: 18px 14px;
+  }
+  .r-score {
+    font-size: 2.8rem;
+  }
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
 }
