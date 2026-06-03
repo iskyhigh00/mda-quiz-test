@@ -65,6 +65,33 @@ let _slideInterval = null;
 const _slidePhotos = new Map();
 const _slideIdx = new Map();
 
+function _doSlide(id) {
+  const photos = _slidePhotos.get(id);
+  if (!photos) return;
+  const next = (_slideIdx.get(id) + 1) % photos.length;
+  _slideIdx.set(id, next);
+  const card = document.querySelector('.card[data-machine-id="' + id + '"]');
+  if (!card || card.style.display === 'none') return;
+  const imgBox = card.querySelector('.card-img');
+  const innerWrap = imgBox && imgBox.firstElementChild;
+  const curImg = innerWrap && innerWrap.querySelector('img');
+  if (!curImg) return;
+  const newImg = document.createElement('img');
+  newImg.draggable = false;
+  newImg.src = getImgUrl(photos[next]);
+  newImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transform:translateX(100%);pointer-events:none;';
+  curImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;';
+  innerWrap.style.overflow = 'hidden';
+  innerWrap.appendChild(newImg);
+  newImg.getBoundingClientRect();
+  const ease = 'transform 0.55s cubic-bezier(0.4,0,0.2,1)';
+  curImg.style.transition = ease;
+  newImg.style.transition = ease;
+  curImg.style.transform = 'translateX(-100%)';
+  newImg.style.transform = 'translateX(0)';
+  setTimeout(() => { curImg.remove(); newImg.style.cssText = ''; innerWrap.style.overflow = ''; }, 620);
+}
+
 function startCatalogSlideshow() {
   stopCatalogSlideshow();
   _slidePhotos.clear();
@@ -78,18 +105,9 @@ function startCatalogSlideshow() {
   });
   if (_slidePhotos.size === 0) return;
   const ids = [..._slidePhotos.keys()];
-  _slideInterval = setInterval(() => {
-    const id = ids[Math.floor(Math.random() * ids.length)];
-    const photos = _slidePhotos.get(id);
-    const next = (_slideIdx.get(id) + 1) % photos.length;
-    _slideIdx.set(id, next);
-    const card = document.querySelector('.card[data-machine-id="' + id + '"]');
-    if (!card || card.style.display === 'none') return;
-    const img = card.querySelector('.card-img img');
-    if (!img) return;
-    img.style.opacity = '0';
-    setTimeout(() => { img.src = getImgUrl(photos[next]); img.style.opacity = '1'; }, 220);
-  }, 2200);
+  const tick = () => _doSlide(ids[Math.floor(Math.random() * ids.length)]);
+  setTimeout(tick, 600);
+  _slideInterval = setInterval(tick, 1800);
 }
 
 function stopCatalogSlideshow() {

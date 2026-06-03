@@ -5,15 +5,15 @@
 // ===== PALETAS DE COLORES =====
 const COLOR_PALETTES = {
   noche:     { name: 'Noche',     '--bg':'#0a0a12','--surface':'#12121e','--card':'#1a1a2e','--accent':'#7c3aed','--accent2':'#06b6d4','--gold':'#c8a850','--green':'#10b981','--red':'#ef4444','--text':'#e8e4f0','--muted':'#64748b','--border':'#2d2d4e' },
-  casino:    { name: 'Casino',    '--bg':'#0d0505','--surface':'#170909','--card':'#1f0e0e','--accent':'#c41c1c','--accent2':'#d97706','--gold':'#d4a847','--green':'#15803d','--red':'#ef4444','--text':'#f4ede8','--muted':'#856060','--border':'#3d1414' },
-  neon:      { name: 'Neón',      '--bg':'#050508','--surface':'#0c0c18','--card':'#121228','--accent':'#d946ef','--accent2':'#22d3ee','--gold':'#fbbf24','--green':'#4ade80','--red':'#fb7185','--text':'#f0e4f8','--muted':'#6b7280','--border':'#2a2040' },
-  esmeralda: { name: 'Esmeralda', '--bg':'#03100a','--surface':'#071a0e','--card':'#0d2415','--accent':'#16a34a','--accent2':'#2dd4bf','--gold':'#c8a850','--green':'#4ade80','--red':'#f87171','--text':'#e4f0ea','--muted':'#4d7a5e','--border':'#153d24' },
-  zafiro:    { name: 'Zafiro',    '--bg':'#04060f','--surface':'#080c1a','--card':'#0e1326','--accent':'#2563eb','--accent2':'#38bdf8','--gold':'#c8a850','--green':'#34d399','--red':'#f87171','--text':'#e2e8f8','--muted':'#4a5568','--border':'#162040' },
-  onix:      { name: 'Ónix',      '--bg':'#060606','--surface':'#0e0e12','--card':'#14141c','--accent':'#6d28d9','--accent2':'#a78bfa','--gold':'#c8a850','--green':'#22c55e','--red':'#f87171','--text':'#e4e0f4','--muted':'#5a5572','--border':'#242038' },
-  granate:   { name: 'Granate',   '--bg':'#0c0508','--surface':'#180a10','--card':'#220e18','--accent':'#9f1239','--accent2':'#fb7185','--gold':'#c8a850','--green':'#4ade80','--red':'#fb7185','--text':'#f0e4ea','--muted':'#7a4d5e','--border':'#3d1428' },
-  indigo:    { name: 'Índigo',    '--bg':'#06060e','--surface':'#0c0c1a','--card':'#121226','--accent':'#4338ca','--accent2':'#818cf8','--gold':'#c8a850','--green':'#34d399','--red':'#f87171','--text':'#e4e2f4','--muted':'#555080','--border':'#201e40' },
-  ambar:     { name: 'Ámbar',     '--bg':'#0e0a04','--surface':'#1a1008','--card':'#241808','--accent':'#b45309','--accent2':'#fbbf24','--gold':'#f59e0b','--green':'#16a34a','--red':'#ef4444','--text':'#f4ece0','--muted':'#7a6840','--border':'#3d2e10' },
-  cromo:     { name: 'Cromo',     '--bg':'#080808','--surface':'#101014','--card':'#18181e','--accent':'#6366f1','--accent2':'#94a3b8','--gold':'#c8a850','--green':'#34d399','--red':'#f87171','--text':'#e8e8f0','--muted':'#5a5a70','--border':'#28283a' },
+  casino:    { name: 'Casino',    '--bg':'#120404','--surface':'#1e0606','--card':'#2a0a0a','--accent':'#e11d1d','--accent2':'#f59e0b','--gold':'#f59e0b','--green':'#16a34a','--red':'#fca5a5','--text':'#ffeee8','--muted':'#8a5050','--border':'#4a1010' },
+  neon:      { name: 'Neón',      '--bg':'#060309','--surface':'#0e0518','--card':'#160830','--accent':'#e020d0','--accent2':'#00f5d0','--gold':'#ffec00','--green':'#00ff88','--red':'#ff3060','--text':'#f5d8ff','--muted':'#8060a0','--border':'#2e1060' },
+  esmeralda: { name: 'Esmeralda','--bg':'#021208','--surface':'#041d0c','--card':'#082814','--accent':'#22c55e','--accent2':'#06d6a0','--gold':'#c8a850','--green':'#4ade80','--red':'#f87171','--text':'#d4f0de','--muted':'#3d7a55','--border':'#0d3d1c' },
+  zafiro:    { name: 'Zafiro',   '--bg':'#020810','--surface':'#04101e','--card':'#071428','--accent':'#1d4ed8','--accent2':'#60a5fa','--gold':'#c8a850','--green':'#34d399','--red':'#f87171','--text':'#d4e8fc','--muted':'#3d5a8a','--border':'#0a2048' },
+  onix:      { name: 'Ónix',     '--bg':'#050505','--surface':'#0d0d0d','--card':'#151515','--accent':'#e2e8f0','--accent2':'#94a3b8','--gold':'#d4af37','--green':'#4ade80','--red':'#f87171','--text':'#f8f8f8','--muted':'#4a4a5a','--border':'#1e1e2a' },
+  granate:   { name: 'Granate',  '--bg':'#0e0208','--surface':'#1c0510','--card':'#280818','--accent':'#881337','--accent2':'#e11d48','--gold':'#c8a850','--green':'#4ade80','--red':'#fda4af','--text':'#fce4ee','--muted':'#7a3050','--border':'#420e24' },
+  indigo:    { name: 'Índigo',   '--bg':'#060410','--surface':'#0c0820','--card':'#120e30','--accent':'#6366f1','--accent2':'#c7d2fe','--gold':'#c8a850','--green':'#34d399','--red':'#f87171','--text':'#e4e8ff','--muted':'#4a5080','--border':'#201e50' },
+  ambar:     { name: 'Ámbar',    '--bg':'#120900','--surface':'#1e1000','--card':'#2e1800','--accent':'#f97316','--accent2':'#fbbf24','--gold':'#fbbf24','--green':'#4ade80','--red':'#ef4444','--text':'#fff0d4','--muted':'#8a6030','--border':'#4a2800' },
+  titanio:   { name: 'Titanio',  '--bg':'#080c0e','--surface':'#0e1418','--card':'#141e24','--accent':'#0d9488','--accent2':'#2dd4bf','--gold':'#c8a850','--green':'#4ade80','--red':'#f87171','--text':'#e4f0f0','--muted':'#3d5a5a','--border':'#0e2e30' },
 };
 
 function applyPalette(key) {
