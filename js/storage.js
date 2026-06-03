@@ -67,6 +67,10 @@ function photoBy(p) {
   return typeof p === 'object' && p ? p.uploaded_by || p.by || '' : '';
 }
 
+function photoAt(p) {
+  return typeof p === 'object' && p ? p.uploaded_at || '' : '';
+}
+
 function makePhotoEntry(url, by) {
   return { url, uploaded_by: by, uploaded_at: new Date().toISOString() };
 }
