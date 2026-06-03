@@ -138,6 +138,30 @@ nav {
 .welcome-btn:hover {
   opacity: 0.85;
 }
+/* Barra de usuario */
+.user-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.user-bar-name {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.user-bar-btn {
+  background: none;
+  border: none;
+  color: var(--accent2);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.user-bar-btn:hover {
+  background: rgba(6, 182, 212, 0.1);
+}
 /* Búsqueda */
 .search-row {
   display: flex;

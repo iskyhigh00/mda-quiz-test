@@ -62,6 +62,7 @@ function initApp() {
     if (nav) nav.style.display = 'flex';
     if (welcome) welcome.classList.remove('active');
     if (catalog) catalog.classList.add('active');
+    _updateUserBar();
     goTo('catalog');
   } else {
     if (nav) nav.style.display = 'none';
@@ -81,14 +82,20 @@ function confirmWelcome() {
   }
   localStorage.setItem('mda_user_name', v);
   playerName = v;
-  
+
   const nav = document.querySelector('nav');
   if (nav) nav.style.display = 'flex';
-  
+
   const welcome = document.getElementById('view-welcome');
   if (welcome) welcome.classList.remove('active');
-  
+
+  _updateUserBar();
   goTo('catalog');
+}
+
+function _updateUserBar() {
+  const el = document.getElementById('user-bar-name');
+  if (el) el.textContent = '👤 ' + (playerName || localStorage.getItem('mda_user_name') || '');
 }
 
 function changeName() {
@@ -102,7 +109,7 @@ function changeName() {
   }
   localStorage.setItem('mda_user_name', trimmed);
   playerName = trimmed;
-  alert('Nombre actualizado a: ' + trimmed);
+  _updateUserBar();
 }
 
 function toggleSection(wrapId, btnId) {

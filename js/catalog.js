@@ -84,9 +84,11 @@ function openGallery(m) {
   document.getElementById('lb-form-note')?.classList.remove('open');
   document.getElementById('lb-form-photo')?.classList.remove('open');
   document.getElementById('lb-form-author-name2').textContent = playerName || localStorage.getItem('mda_user_name') || '';
-  renderGalleryPhoto();  // <-- Asegurar que esta línea existe
+  renderGalleryPhoto();
   renderLbThumbs();
   loadLbNotes(m.id);
+  history.pushState({ lightbox: true }, '');
+  _lbHistoryPushed = true;
   document.getElementById('lightbox').classList.add('open');
 }
 function renderGalleryPhoto() {
@@ -145,9 +147,25 @@ function galleryNav(dir) {
   renderLbThumbs();
 }
 
+let _lbHistoryPushed = false;
+
 function closeLb() {
-  document.getElementById('lightbox').classList.remove('open');
+  const lb = document.getElementById('lightbox');
+  if (!lb.classList.contains('open')) return;
+  lb.classList.remove('open');
+  if (_lbHistoryPushed) {
+    _lbHistoryPushed = false;
+    history.back();
+  }
 }
+
+window.addEventListener('popstate', () => {
+  const lb = document.getElementById('lightbox');
+  if (lb?.classList.contains('open')) {
+    _lbHistoryPushed = false;
+    lb.classList.remove('open');
+  }
+});
 
 // Swipe touch para galería
 let _lbTouchX = 0;
