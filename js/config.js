@@ -24,6 +24,10 @@ let publicUploadMachineId = null;
 let qCorrect = 0, qWrong = 0, qScore = 0, qIdx = -1, qAnswered = false;
 let qQueue = [], qTotal = 0, qNum = 0, qStart = 0;
 let timerInt = null, autoTO = null;
+let qQuestionQueue = [], qCurrentQ = null;
+
+// Community questions admin
+let pendingQuestions = [], approvedQuestions = [], _editingQuestionId = null;
 const CIRC = 131.9;
 const imgCache = {};
 

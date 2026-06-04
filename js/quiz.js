@@ -48,17 +48,17 @@ function updateQStats() {
   document.getElementById('q-pts').textContent = qScore;
 }
 
-function showFb(ok, name, pts) {
+function showFb(ok, correctName, pts) {
   const msg = document.getElementById('fb-msg');
   const pEl = document.getElementById('fb-pts');
   if (ok) {
     msg.className = 'fb-msg fb-ok';
-    msg.textContent = ['Correcto!', 'Exacto!', 'Muy bien!', 'Perfecto!'][Math.floor(Math.random() * 4)];
+    msg.textContent = ['¡Correcto!', '¡Exacto!', '¡Muy bien!', '¡Perfecto!'][Math.floor(Math.random() * 4)];
     pEl.textContent = '+' + pts + ' pts';
     pEl.style.display = '';
   } else {
     msg.className = 'fb-msg fb-fail';
-    msg.textContent = 'Era: ' + name;
+    msg.textContent = 'Era: ' + correctName;
     pEl.style.display = 'none';
   }
 }
@@ -107,18 +107,20 @@ function startTimer() {
 function timeOut() {
   qAnswered = true;
   qWrong++;
-  const cn = MACHINES[qIdx]?.name || '';
+  const correctName = qCurrentQ
+    ? (qCurrentQ.source === 'machine' ? qCurrentQ.machine.name : qCurrentQ.correct_answer)
+    : '';
   document.querySelectorAll('.opt').forEach(b => {
     b.disabled = true;
-    if (b.textContent === cn) b.classList.add('correct');
+    if (b.textContent === correctName) b.classList.add('correct');
   });
-  showFb(false, cn, 0);
-  recordAnswer(cn, false, cfg.t * 1000, 0);
+  showFb(false, correctName, 0);
+  recordAnswer(correctName, false, cfg.t * 1000, 0);
   updateQStats();
   scheduleNext(2400);
 }
 
-function pickOpt(isOk, btn, name) {
+function pickOpt(isOk, btn, selectedText, correctText) {
   if (qAnswered) return;
   qAnswered = true;
   clearTimers();
@@ -133,88 +135,108 @@ function pickOpt(isOk, btn, name) {
     showFb(true, '', pts);
   } else {
     btn.classList.add('wrong');
-    const cn = MACHINES[qIdx]?.name || '';
     document.querySelectorAll('.opt').forEach(b => {
-      if (b.textContent === cn) b.classList.add('correct');
+      if (b.textContent === correctText) b.classList.add('correct');
     });
     qWrong++;
-    showFb(false, cn, 0);
+    showFb(false, correctText, 0);
   }
-  recordAnswer(MACHINES[qIdx]?.name || '', isOk, ms, pts);
+  recordAnswer(correctText, isOk, ms, pts);
   updateQStats();
   scheduleNext(2000);
 }
 
 function nextQ() {
-  if (qNum >= qTotal) {
-    endQuiz();
-    return;
-  }
+  if (qNum >= qTotal) { endQuiz(); return; }
   clearTimers();
   qAnswered = false;
   document.getElementById('fb-msg').textContent = '';
   document.getElementById('fb-pts').style.display = 'none';
   document.getElementById('auto-bar-wrap').style.display = 'none';
-  
-  const pl = MACHINES.filter(m => m.photo_url);
-  const m = pl[qQueue[qNum]];
+
+  const q = qQuestionQueue[qNum];
+  qCurrentQ = q;
   qNum++;
-  qIdx = MACHINES.indexOf(m);
-  
+
   document.getElementById('prog-lbl').textContent = qNum + '/' + qTotal;
   document.getElementById('prog-bar').style.width = ((qNum - 1) / qTotal * 100) + '%';
-  
-  const allP = [m.photo_url, ...(m.photo_urls || []).map(photoUrl)].filter(Boolean);
-  const okP = allP.filter(u => imgCache[u] && imgCache[u] !== 'error');
-  const photos = okP.length ? okP : allP;
-  const chosenPhoto = photos[Math.floor(Math.random() * photos.length)];
+
   const img = document.getElementById('quiz-img');
-  const cached = imgCache[chosenPhoto];
-  if (cached && cached !== 'error' && cached.complete) {
-    img.src = cached.src;
-    img.style.opacity = '1';
-  } else {
-    img.style.opacity = '0.3';
-    setTimeout(() => {
-      img.src = getImgUrl(chosenPhoto);
-      img.style.opacity = '1';
-    }, 80);
-  }
-  
-  const cn = m.name;
-  const pool = shuffle(pl.filter((x, i) => i !== qQueue[qNum - 1] && x.name !== cn));
-  const allOpts = shuffle([m, ...pool.slice(0, 3)]);
   const og = document.getElementById('opts');
   og.innerHTML = '';
-  allOpts.forEach(om => {
-    const b = document.createElement('button');
-    b.className = 'opt';
-    b.textContent = om.name;
-    b.onclick = () => pickOpt(om === m, b, om.name);
-    og.appendChild(b);
-  });
+
+  if (q.source === 'machine') {
+    const m = q.machine;
+    document.getElementById('quiz-q').textContent = '¿Cómo se llama este modelo?';
+    const allP = [m.photo_url, ...(m.photo_urls || []).map(photoUrl)].filter(Boolean);
+    const okP = allP.filter(u => imgCache[u] && imgCache[u] !== 'error');
+    const photos = okP.length ? okP : allP;
+    const chosenPhoto = photos[Math.floor(Math.random() * photos.length)];
+    const cached = imgCache[chosenPhoto];
+    if (cached && cached !== 'error' && cached.complete) {
+      img.src = cached.src;
+      img.style.opacity = '1';
+    } else {
+      img.style.opacity = '0.3';
+      setTimeout(() => { img.src = getImgUrl(chosenPhoto); img.style.opacity = '1'; }, 80);
+    }
+    const pl = MACHINES.filter(x => x.photo_url);
+    const pool = shuffle(pl.filter(x => x.name !== m.name));
+    const allOpts = shuffle([m, ...pool.slice(0, 3)]);
+    allOpts.forEach(om => {
+      const b = document.createElement('button');
+      b.className = 'opt';
+      b.textContent = om.name;
+      b.onclick = () => pickOpt(om === m, b, om.name, m.name);
+      og.appendChild(b);
+    });
+  } else {
+    document.getElementById('quiz-q').textContent = q.question_text;
+    img.style.opacity = '0.3';
+    const cached = imgCache[q.image_url];
+    if (cached && cached !== 'error' && cached.complete) {
+      img.src = cached.src;
+      img.style.opacity = '1';
+    } else {
+      img.src = getImgUrl(q.image_url);
+      img.onload = () => { img.style.opacity = '1'; };
+      img.onerror = () => { img.style.opacity = '0.5'; };
+    }
+    q.options.forEach(opt => {
+      const b = document.createElement('button');
+      b.className = 'opt';
+      b.textContent = opt;
+      b.onclick = () => pickOpt(opt === q.correct_answer, b, opt, q.correct_answer);
+      og.appendChild(b);
+    });
+  }
+
   qStart = Date.now();
   startTimer();
 }
 
-async function preloadAndCountdown(pl) {
+async function preloadAndCountdown() {
   const overlay = document.getElementById('countdown-overlay');
   const cdStatus = document.getElementById('cd-status');
   const cdNum = document.getElementById('cd-num');
   const cdBar = document.getElementById('cd-bar');
   overlay.style.display = 'flex';
-  
-  const queuedMachines = qQueue.map(i => pl[i]).filter(m => m && m.photo_url);
+
   const allUrls = [];
-  queuedMachines.forEach(m => {
-    [m.photo_url, ...(m.photo_urls || []).map(photoUrl)].filter(Boolean).forEach(u => allUrls.push(u));
+  qQuestionQueue.forEach(q => {
+    if (q.source === 'machine') {
+      const m = q.machine;
+      [m.photo_url, ...(m.photo_urls || []).map(photoUrl)].filter(Boolean).forEach(u => allUrls.push(u));
+    } else if (q.image_url) {
+      allUrls.push(q.image_url);
+    }
   });
-  
+
   let loaded = 0;
   const totalToLoad = allUrls.length;
   cdStatus.textContent = 'Cargando imágenes... 0/' + totalToLoad;
   cdBar.style.width = '0%';
-  
+
   await Promise.all(allUrls.map(url => new Promise(resolve => {
     if (imgCache[url] && imgCache[url] !== 'error') {
       loaded++;
@@ -240,22 +262,25 @@ async function preloadAndCountdown(pl) {
     };
     img.src = url;
   })));
-  
-  qQueue = qQueue.filter(i => {
-    const m = pl[i];
-    if (!m || !m.photo_url) return false;
-    const photos = [m.photo_url, ...(m.photo_urls || []).map(photoUrl)].filter(Boolean);
-    return photos.some(u => imgCache[u] && imgCache[u] !== 'error');
+
+  qQuestionQueue = qQuestionQueue.filter(q => {
+    if (q.source === 'machine') {
+      const m = q.machine;
+      if (!m.photo_url) return false;
+      const photos = [m.photo_url, ...(m.photo_urls || []).map(photoUrl)].filter(Boolean);
+      return photos.some(u => imgCache[u] && imgCache[u] !== 'error');
+    }
+    return true;
   });
-  qTotal = qQueue.length;
-  
+  qTotal = qQuestionQueue.length;
+
   if (qTotal < 4) {
     overlay.style.display = 'none';
     alert('No hay suficientes imágenes disponibles. Verifica tu conexión.');
     goTo('setup');
     return;
   }
-  
+
   cdStatus.textContent = '¡Prepárate!';
   for (let i = 3; i >= 1; i--) {
     cdNum.textContent = i;
@@ -268,26 +293,59 @@ async function preloadAndCountdown(pl) {
   nextQ();
 }
 
-function startQuiz() {
+async function startQuiz() {
   playerName = playerName || localStorage.getItem('mda_user_name') || '';
   if (!playerName) {
     alert('Primero configura tu nombre en el catálogo.');
     goTo('catalog');
     return;
   }
+
+  let quizType = 'modelo';
+  try {
+    const rows = await sbGet('/rest/v1/settings?key=eq.quiz_type_current');
+    quizType = rows[0]?.value || 'modelo';
+  } catch (e) {}
+
   const pl = MACHINES.filter(m => m.photo_url);
-  if (pl.length < 4) {
-    alert('Necesitas al menos 4 modelos con foto.');
+  let allQs = [];
+
+  if (quizType === 'modelo' || quizType === 'todo') {
+    if (pl.length < 4 && quizType === 'modelo') {
+      alert('Necesitas al menos 4 modelos con foto.');
+      return;
+    }
+    allQs.push(...shuffle([...pl]).map(m => ({ source: 'machine', machine: m })));
+  }
+
+  if (quizType !== 'modelo') {
+    const types = quizType === 'todo' ? 'falla,curiosidad,repuesto' : quizType;
+    try {
+      const rows = await sbGet('/rest/v1/quiz_questions?status=eq.approved&type=in.(' + types + ')&limit=500');
+      allQs.push(...rows.map(r => ({
+        source: 'community',
+        id: r.id,
+        type: r.type,
+        image_url: r.image_url,
+        question_text: r.question_text,
+        correct_answer: r.correct_answer,
+        options: shuffle([r.correct_answer, r.option_b, r.option_c, r.option_d])
+      })));
+    } catch (e) {}
+  }
+
+  allQs = shuffle(allQs);
+  if (allQs.length < 4) {
+    alert('No hay suficientes preguntas disponibles para este tipo de quiz.');
     return;
   }
-  const cnt = cfg.q >= 999 ? pl.length : Math.min(cfg.q, pl.length);
-  qQueue = shuffle(pl.map((_, i) => i)).slice(0, cnt);
-  qTotal = qQueue.length;
-  qNum = 0;
-  qCorrect = 0;
-  qWrong = 0;
-  qScore = 0;
-  preloadAndCountdown(pl);
+
+  const cnt = Math.min(cfg.q, allQs.length);
+  qQuestionQueue = allQs.slice(0, cnt);
+  qTotal = qQuestionQueue.length;
+  qNum = 0; qCorrect = 0; qWrong = 0; qScore = 0; qCurrentQ = null;
+
+  preloadAndCountdown();
 }
 
 async function saveIncompleteGame() {
@@ -304,29 +362,17 @@ async function saveIncompleteGame() {
       completed: false,
       season: currentSeason()
     });
-  } catch (e) {
-    console.error('saveIncomplete failed', e);
-  }
+  } catch (e) {}
 }
 
 async function restartQuiz() {
-  if (qNum > 0) {
-    await saveIncompleteGame();
-  }
-  const pl = MACHINES.filter(m => m.photo_url);
-  if (pl.length < 4) return;
-  const cnt = cfg.q >= 999 ? pl.length : Math.min(cfg.q, pl.length);
-  qQueue = shuffle(pl.map((_, i) => i)).slice(0, cnt);
-  qTotal = qQueue.length;
-  qNum = 0;
-  qCorrect = 0;
-  qWrong = 0;
-  qScore = 0;
+  if (qNum > 0) await saveIncompleteGame();
   clearTimers();
+  qNum = 0; qCorrect = 0; qWrong = 0; qScore = 0;
   document.getElementById('q-ok').textContent = 0;
   document.getElementById('q-err').textContent = 0;
   document.getElementById('q-pts').textContent = 0;
-  preloadAndCountdown(pl);
+  startQuiz();
 }
 
 async function saveScore(name, pts, correct, total, sec, accuracy) {
@@ -334,15 +380,15 @@ async function saveScore(name, pts, correct, total, sec, accuracy) {
     await sbPost('/rest/v1/scores', {
       name, pts, correct, total, timer_sec: sec, accuracy, completed: true, season: currentSeason()
     });
-  } catch (e) { }
+  } catch (e) {}
 }
 
-async function recordAnswer(mn, correct, timeMs, pts) {
+async function recordAnswer(correctName, correct, timeMs, pts) {
   try {
     await sbPost('/rest/v1/quiz_answers', {
-      player_name: playerName, machine_name: mn, correct, time_ms: timeMs, pts, timer_sec: cfg.t, season: currentSeason()
+      player_name: playerName, machine_name: correctName, correct, time_ms: timeMs, pts, timer_sec: cfg.t, season: currentSeason()
     });
-  } catch (e) { }
+  } catch (e) {}
 }
 
 async function endQuiz() {
@@ -360,7 +406,6 @@ async function endQuiz() {
   document.getElementById('r-err').textContent = qWrong;
   document.getElementById('r-acc').textContent = acc + '%';
 
-  // Desempate antes de mostrar resultado
   normalizedScore = await checkSuddenDeath(normalizedScore);
 
   document.getElementById('r-trophy').innerHTML = trophy;
@@ -389,9 +434,9 @@ async function checkSuddenDeath(score) {
 
 function runSuddenDeath(baseScore) {
   return new Promise(resolve => {
-    const usedIds = new Set(qQueue.map(i => MACHINES[i]?.id));
     const pool = MACHINES.filter(m => m.photo_url);
-    const fresh = pool.filter(m => !usedIds.has(m.id));
+    const usedNames = new Set(qQuestionQueue.filter(q => q.source === 'machine').map(q => q.machine.name));
+    const fresh = pool.filter(m => !usedNames.has(m.name));
     const candidates = fresh.length >= 4 ? fresh : pool;
     if (candidates.length < 4) { resolve(baseScore); return; }
 

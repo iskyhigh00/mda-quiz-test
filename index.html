@@ -66,6 +66,7 @@
       </div>
     </div>
     <button class="start-btn" onclick="startQuiz()">▶ Comenzar</button>
+    <button class="submit-q-btn" onclick="openSubmitQuestion()">❓ Aportar pregunta</button>
   </div>
 </div>
 
@@ -96,7 +97,7 @@
   </div>
   <div class="quiz-card">
     <div class="quiz-img"><img id="quiz-img" src="" alt=""></div>
-    <div class="quiz-q">¿Cómo se llama este modelo?</div>
+    <div class="quiz-q" id="quiz-q">¿Cómo se llama este modelo?</div>
     <div class="opts" id="opts"></div>
     <div class="feedback"><span class="fb-msg" id="fb-msg"></span><span class="fb-pts" id="fb-pts" style="display:none"></span></div>
     <div class="auto-bar-wrap" id="auto-bar-wrap" style="display:none"><div class="auto-bar" id="auto-bar"></div></div>
@@ -138,6 +139,7 @@
     <div class="atab" onclick="adminTab('modelos')">🎰 Modelos</div>
     <div class="atab" onclick="adminTab('estadisticas')">📊 Estadísticas</div>
     <div class="atab" onclick="adminTab('historial')">📅 Historial</div>
+    <div class="atab" onclick="adminTab('preguntas')">❓ Preguntas</div>
   </div>
   <div id="atab-competencia" class="atab-panel">
     <div class="section-box"><div class="section-head">🏆 Control de competencia <span id="comp-status-badge"></span></div>
@@ -158,6 +160,22 @@
       <div><label class="form-label">10 preguntas</label><input class="modal-input" id="max-pts-10" type="number"></div>
       <div><label class="form-label">20 preguntas</label><input class="modal-input" id="max-pts-20" type="number"></div></div>
     </div>
+    <div class="section-box"><div class="section-head">❓ Tipo de quiz <button class="btn btn-primary btn-sm" onclick="saveQuizConfig()">Guardar</button></div>
+      <div style="padding:14px;">
+        <div><label class="form-label">Tipo de preguntas en la competencia</label>
+          <select class="modal-input" id="quiz-type-select" style="margin-top:6px;">
+            <option value="modelo">Solo modelos (identificar máquina)</option>
+            <option value="falla">Solo fallas</option>
+            <option value="curiosidad">Solo curiosidades</option>
+            <option value="repuesto">Solo repuestos</option>
+            <option value="todo">Todo mezclado</option>
+          </select>
+        </div>
+        <div style="margin-top:12px;"><label class="form-label">Instrucciones para aportar pregunta</label>
+          <textarea class="modal-input" id="quiz-instructions" rows="3" style="margin-top:6px;resize:vertical;" placeholder="Instrucciones que verán los usuarios al aportar preguntas..."></textarea>
+        </div>
+      </div>
+    </div>
   </div>
   <div id="atab-modelos" class="atab-panel" style="display:none;">
     <div class="admin-toolbar"><input class="admin-search" id="admin-search" placeholder="Buscar modelo..." oninput="renderAdmin()"><button class="btn btn-primary" onclick="openAdd()">+ Agregar</button><span class="sync-badge sync-loading" id="sync-badge">...</span></div>
@@ -174,6 +192,21 @@
     <div class="section-box"><div class="section-head">🏆 Gestión de ganadores</div><div id="winners-mgmt-list"><div class="loading">Cargando...</div></div></div>
     <div class="section-box"><div class="section-head" style="display:flex;align-items:center;gap:8px;">📝 Gestión de datos curiosos <input class="admin-search" id="notes-search" placeholder="Buscar..." oninput="renderNotesMgmt()" style="flex:1;margin-left:8px;font-size:0.75rem;padding:5px 10px;"></div><div id="notes-mgmt-list"><div class="loading">Cargando...</div></div></div>
   </div>
+  <div id="atab-preguntas" class="atab-panel" style="display:none;">
+    <div class="section-box">
+      <div class="section-head" style="display:flex;align-items:center;gap:8px;">
+        ❓ Preguntas comunitarias
+        <span id="pending-q-badge" style="background:var(--red);color:#fff;border-radius:999px;font-size:0.7rem;padding:1px 7px;margin-left:4px;display:none;"></span>
+        <button class="btn btn-secondary btn-sm" style="margin-left:auto" onclick="loadPendingQuestions()">⟳</button>
+      </div>
+      <div style="padding:10px 14px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-secondary btn-sm" id="pq-filter-pending" onclick="filterPendingQ('pending')" style="opacity:1;">⏳ Pendientes</button>
+        <button class="btn btn-secondary btn-sm" id="pq-filter-approved" onclick="filterPendingQ('approved')" style="opacity:0.5;">✅ Aprobadas</button>
+        <button class="btn btn-secondary btn-sm" id="pq-filter-rejected" onclick="filterPendingQ('rejected')" style="opacity:0.5;">❌ Rechazadas</button>
+      </div>
+      <div id="pending-q-list"><div class="no-data">Presiona ⟳ para cargar.</div></div>
+    </div>
+  </div>
 </div>
 
 <!-- MODALES Y OVERLAYS -->
@@ -189,6 +222,67 @@
 
 <div id="sd-overlay"><div class="sd-box"><div class="sd-header">⚡ DESEMPATE</div><div class="sd-sub">¡Empataste el primer lugar o alcanzaste el puntaje máximo! Responde antes que los puntos lleguen a 0.</div><div class="sd-pts-wrap"><span class="sd-pts-label">puntos disponibles</span><span class="sd-pts-val" id="sd-pts-val">5</span></div><div class="sd-img-wrap"><img id="sd-img" src="" draggable="false"></div><div class="sd-opts" id="sd-opts"></div><div class="sd-result" id="sd-result" style="display:none"></div></div></div>
 
+<!-- MODAL: Aportar pregunta (público) -->
+<div id="modal-submit-q" class="modal">
+  <div class="modal-box">
+    <div class="modal-title">❓ Aportar pregunta</div>
+    <div id="sq-instructions" style="font-size:0.8rem;color:var(--muted);margin-bottom:12px;line-height:1.5;"></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
+      <div style="flex:1;"><label class="form-label">Tu nombre</label><input class="modal-input" id="sq-author" maxlength="40"></div>
+      <label style="display:flex;align-items:center;gap:5px;font-size:0.78rem;color:var(--muted);white-space:nowrap;margin-top:16px;"><input type="checkbox" id="sq-anon"> Anónimo</label>
+    </div>
+    <div style="margin-bottom:10px;"><label class="form-label">Tipo</label>
+      <select class="modal-input" id="sq-type" style="margin-top:4px;">
+        <option value="falla">Falla</option>
+        <option value="curiosidad">Curiosidad</option>
+        <option value="repuesto">Repuesto</option>
+      </select>
+    </div>
+    <div style="margin-bottom:10px;"><label class="form-label">Pregunta</label><input class="modal-input" id="sq-question" maxlength="200" placeholder="¿Cuál es...?"></div>
+    <div style="margin-bottom:6px;"><label class="form-label">✅ Respuesta correcta</label><input class="modal-input" id="sq-correct" maxlength="120" placeholder="La respuesta correcta"></div>
+    <div style="margin-bottom:6px;"><label class="form-label">❌ Alternativa incorrecta 2</label><input class="modal-input" id="sq-optb" maxlength="120"></div>
+    <div style="margin-bottom:6px;"><label class="form-label">❌ Alternativa incorrecta 3</label><input class="modal-input" id="sq-optc" maxlength="120"></div>
+    <div style="margin-bottom:10px;"><label class="form-label">❌ Alternativa incorrecta 4</label><input class="modal-input" id="sq-optd" maxlength="120"></div>
+    <div style="margin-bottom:10px;">
+      <label class="form-label">Imagen de referencia</label>
+      <div id="sq-preview" style="min-height:50px;background:var(--surface);border-radius:8px;display:flex;align-items:center;justify-content:center;margin:6px 0;padding:6px;"></div>
+      <label class="upload-label">📷 Seleccionar imagen<input type="file" accept="image/*" onchange="previewQPhoto(this)" style="display:none"></label>
+    </div>
+    <div id="sq-status" style="display:none;font-size:0.82rem;padding:6px 0;"></div>
+    <div class="modal-btns">
+      <button class="btn btn-primary" onclick="submitQuestion()">Enviar</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-submit-q')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Editar/revisar pregunta (admin) -->
+<div id="modal-edit-q" class="modal">
+  <div class="modal-box">
+    <div class="modal-title">✏️ Revisar pregunta</div>
+    <div style="margin-bottom:8px;"><label class="form-label">Tipo</label>
+      <select class="modal-input" id="eq-type" style="margin-top:4px;">
+        <option value="falla">Falla</option>
+        <option value="curiosidad">Curiosidad</option>
+        <option value="repuesto">Repuesto</option>
+      </select>
+    </div>
+    <div style="margin-bottom:8px;"><label class="form-label">Pregunta</label><input class="modal-input" id="eq-question" maxlength="200"></div>
+    <div style="margin-bottom:6px;"><label class="form-label">✅ Respuesta correcta</label><input class="modal-input" id="eq-correct" maxlength="120"></div>
+    <div style="margin-bottom:6px;"><label class="form-label">❌ Alternativa 2</label><input class="modal-input" id="eq-optb" maxlength="120"></div>
+    <div style="margin-bottom:6px;"><label class="form-label">❌ Alternativa 3</label><input class="modal-input" id="eq-optc" maxlength="120"></div>
+    <div style="margin-bottom:10px;"><label class="form-label">❌ Alternativa 4</label><input class="modal-input" id="eq-optd" maxlength="120"></div>
+    <div id="eq-img-wrap" style="margin-bottom:10px;background:var(--surface);border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:60px;"></div>
+    <div id="eq-status" style="display:none;font-size:0.82rem;padding:6px 0;"></div>
+    <div class="modal-btns" style="flex-wrap:wrap;gap:8px;">
+      <button class="btn btn-primary" onclick="approveEditedQuestion()">✅ Aprobar</button>
+      <button class="btn btn-secondary" onclick="saveEditedQuestion()">💾 Guardar</button>
+      <button class="btn btn-danger" onclick="rejectQuestion(_editingQuestionId)">❌ Rechazar</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-edit-q')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- SCRIPTS -->
 <script src="js/config.js"></script>
 <script src="js/api.js"></script>
@@ -197,6 +291,7 @@
 <script src="js/catalog.js"></script>
 <script src="js/quiz.js"></script>
 <script src="js/ranking.js"></script>
+<script src="js/questions.js"></script>
 <script src="js/admin.js"></script>
 <script src="js/main.js"></script>
 </body>
