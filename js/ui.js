@@ -49,6 +49,7 @@ function goTo(v) {
     const pw = MACHINES.filter(m => m.photo_url).length;
     const w = document.getElementById('no-img-warn');
     if (w) w.style.display = pw < 4 ? 'block' : 'none';
+    if (typeof loadApprovedQCounts === 'function') loadApprovedQCounts();
   }
 }
 

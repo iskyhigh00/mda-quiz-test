@@ -203,7 +203,7 @@ nav {
 /* Grid catálogo */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: 12px;
 }
 .card {
@@ -222,11 +222,11 @@ nav {
 }
 .card-img {
   width: 100%;
-  aspect-ratio: 3/4;
+  aspect-ratio: 2/3;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #0a0a14;
+  background: var(--surface);
   overflow: hidden;
   position: relative;
 }
@@ -250,7 +250,7 @@ nav {
   font-weight: 500;
   font-size: 0.75rem;
   text-align: center;
-  background: linear-gradient(180deg, var(--card), #0f0f1a);
+  background: var(--card);
   color: var(--text);
 }
 /* Lightbox */
@@ -284,7 +284,7 @@ nav {
 }
 .lb-img {
   width: 100%;
-  background: #0a0a14;
+  background: var(--surface);
   padding: 16px;
   display: flex;
   align-items: center;
@@ -531,6 +531,12 @@ nav {
 .chip.active .chip-pts {
   opacity: 0.85;
 }
+.chip.chip-disabled {
+  opacity: 0.32;
+  cursor: default;
+}
+.chip.chip-disabled:hover { transform: none; }
+.chip.chip-disabled:active { transform: none; }
 .start-btn {
   width: 100%;
   background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent2) 55%, #000));
@@ -684,7 +690,7 @@ nav {
 }
 .quiz-img {
   width: 100%;
-  background: #0a0a12;
+  background: var(--surface);
   padding: 10px;
   display: flex;
   align-items: center;
@@ -998,14 +1004,14 @@ nav {
   height: 46px;
   border-radius: 8px;
   object-fit: contain;
-  background: #0a0a14;
+  background: var(--surface);
   flex-shrink: 0;
 }
 .model-thumb-empty {
   width: 46px;
   height: 46px;
   border-radius: 8px;
-  background: #0a0a14;
+  background: var(--surface);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -1155,7 +1161,7 @@ nav {
   border-color: var(--accent2);
 }
 .img-preview {
-  background: #0a0a14;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 12px;
@@ -1213,7 +1219,7 @@ nav {
   height: 78px;
   object-fit: contain;
   border-radius: 8px;
-  background: #0a0a14;
+  background: var(--surface);
   border: 1px solid var(--border);
 }
 .photo-del {
@@ -1405,7 +1411,7 @@ tbody td {
 .sd-pts-val.critical { color: var(--red); }
 .sd-img-wrap {
   width: 100%;
-  background: #0a0a14;
+  background: var(--surface);
   border-radius: 14px;
   border: 2px solid var(--gold);
   display: flex;
@@ -1487,6 +1493,36 @@ tbody td {
   .stats-grid {
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   }
+}
+
+/* ========== QUIZ TYPE MIX GRID (admin) ========== */
+.mix-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 8px;
+}
+.mix-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+  color: var(--text);
+}
+.mix-row span:first-child {
+  width: 110px;
+  flex-shrink: 0;
+}
+.mix-input {
+  width: 70px !important;
+  text-align: center;
+  padding: 6px 8px !important;
+}
+.mix-total {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--green);
+  margin-top: 4px;
 }
 
 /* ========== MODE BANNER (setup) ========== */

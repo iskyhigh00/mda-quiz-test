@@ -8,16 +8,91 @@ function pickChip(g, v, el) {
   el.classList.add('active');
 }
 
-function pickTypeChip(type, el) {
-  cfg.type = type;
-  el.closest('.chips').querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
+let _approvedQCounts = null;
+let _typeChipMsgTO = null;
+
+async function loadApprovedQCounts() {
+  try {
+    const rows = await sbGet('/rest/v1/quiz_questions?status=eq.approved&select=type');
+    _approvedQCounts = { falla: 0, curiosidad: 0, repuesto: 0 };
+    rows.forEach(r => { if (_approvedQCounts[r.type] !== undefined) _approvedQCounts[r.type]++; });
+  } catch (e) {
+    _approvedQCounts = { falla: 0, curiosidad: 0, repuesto: 0 };
+  }
+  updateTypeChipAvailability();
 }
 
+function updateTypeChipAvailability() {
+  if (!_approvedQCounts) return;
+  const MIN = 15;
+  ['falla', 'curiosidad', 'repuesto'].forEach(type => {
+    const count = _approvedQCounts[type] || 0;
+    const chipEl = document.querySelector('[data-type="' + type + '"]');
+    if (!chipEl) return;
+    chipEl.classList.toggle('chip-disabled', count < MIN);
+    chipEl.dataset.count = count;
+  });
+}
+
+function showTypeChipMsg(msg) {
+  const el = document.getElementById('type-chip-msg');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(_typeChipMsgTO);
+  _typeChipMsgTO = setTimeout(() => { el.style.display = 'none'; }, 3000);
+}
+
+function pickTypeChip(type, el) {
+  const chips = el.closest('.chips');
+  const allChips = Array.from(chips.querySelectorAll('[data-type]'));
+  const todoChip = chips.querySelector('[data-type="todo"]');
+
+  if (el.classList.contains('chip-disabled')) {
+    const count = parseInt(el.dataset.count || '0');
+    showTypeChipMsg('Faltan preguntas aprobadas (' + count + '/15)');
+    return;
+  }
+
+  if (type === 'todo') {
+    allChips.forEach(c => c.classList.remove('active'));
+    todoChip.classList.add('active');
+    cfg.types = [];
+    return;
+  }
+
+  el.classList.toggle('active');
+
+  const enabledIndividuals = allChips.filter(c => c.dataset.type !== 'todo' && !c.classList.contains('chip-disabled'));
+  const activeEnabled = enabledIndividuals.filter(c => c.classList.contains('active'));
+
+  if (activeEnabled.length === 0) {
+    todoChip.classList.add('active');
+    cfg.types = [];
+  } else if (activeEnabled.length === enabledIndividuals.length) {
+    allChips.forEach(c => c.classList.remove('active'));
+    todoChip.classList.add('active');
+    cfg.types = [];
+  } else {
+    todoChip.classList.remove('active');
+    cfg.types = activeEnabled.map(c => c.dataset.type);
+  }
+}
+
+function pickDiffChip(diff, el) {
+  cfg.diff = diff;
+  el.closest('.chips').querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  updateSetupChips();
+}
+
+
 function updateSetupChips() {
+  const d = DIFFICULTIES[cfg.diff] || DIFFICULTIES.normal;
   [5, 10, 20].forEach(q => {
     const el = document.getElementById('chip-pts-' + q);
-    if (el) el.textContent = '≤ ' + (maxPtsConfig[q] || (q === 5 ? 1000 : q === 10 ? 1200 : 1300)) + ' pts';
+    const base = maxPtsConfig[q] || (q === 5 ? 1000 : q === 10 ? 1200 : 1300);
+    if (el) el.textContent = '≤ ' + Math.round(base * d.finalMult) + ' pts';
   });
 }
 
@@ -26,7 +101,7 @@ function vipMult() {
 }
 
 function timerMult() {
-  return { 5: 1.0, 10: 0.7 }[cfg.t] || 1.0;
+  return (DIFFICULTIES[cfg.diff] || DIFFICULTIES.normal).speedMult;
 }
 
 function graceExtra() {
@@ -163,6 +238,11 @@ function nextQ() {
   const q = qQuestionQueue[qNum];
   qCurrentQ = q;
   qNum++;
+
+  // Set per-question time based on difficulty + question type
+  const _d = DIFFICULTIES[cfg.diff] || DIFFICULTIES.normal;
+  cfg.t = q.source === 'machine' ? _d.tMachine : _d.tComm;
+
 
   document.getElementById('prog-lbl').textContent = qNum + '/' + qTotal;
   document.getElementById('prog-bar').style.width = ((qNum - 1) / qTotal * 100) + '%';
@@ -307,48 +387,93 @@ async function startQuiz() {
     return;
   }
 
-  let quizType = 'modelo';
-  try {
-    const rows = await sbGet('/rest/v1/settings?key=eq.quiz_type_current');
-    quizType = rows[0]?.value || 'modelo';
-  } catch (e) {}
-  if (!compState.active && cfg.type) quizType = cfg.type;
-
   const pl = MACHINES.filter(m => m.photo_url);
-  let allQs = [];
 
-  if (quizType === 'modelo' || quizType === 'todo') {
-    if (pl.length < 4 && quizType === 'modelo') {
-      alert('Necesitas al menos 4 modelos con foto.');
-      return;
-    }
-    allQs.push(...shuffle([...pl]).map(m => ({ source: 'machine', machine: m })));
+  // --- Determinar mix de tipos ---
+  let mix = { modelo: 100, falla: 0, curiosidad: 0, repuesto: 0 };
+  if (compState.active || cfg.types.length === 0) {
+    try {
+      const rows = await sbGet('/rest/v1/settings?key=eq.quiz_type_mix');
+      if (rows[0]) mix = JSON.parse(rows[0].value);
+    } catch (e) {}
+  } else {
+    mix = { modelo: 0, falla: 0, curiosidad: 0, repuesto: 0 };
+    const pct = Math.floor(100 / cfg.types.length);
+    cfg.types.forEach(t => { mix[t] = pct; });
+    const rem = 100 - pct * cfg.types.length;
+    if (rem > 0) mix[cfg.types[0]] += rem;
   }
 
-  if (quizType !== 'modelo') {
-    const types = quizType === 'todo' ? 'falla,curiosidad,repuesto' : quizType;
+  // --- Precisión histórica por máquina ---
+  const accMap = {};
+  if (mix.modelo > 0) {
     try {
-      const rows = await sbGet('/rest/v1/quiz_questions?status=eq.approved&type=in.(' + types + ')&limit=500');
-      allQs.push(...rows.map(r => ({
-        source: 'community',
-        id: r.id,
-        type: r.type,
-        image_url: r.image_url,
-        question_text: r.question_text,
-        correct_answer: r.correct_answer,
-        options: shuffle([r.correct_answer, r.option_b, r.option_c, r.option_d])
-      })));
+      const answers = await sbGet('/rest/v1/quiz_answers?order=id.desc&limit=3000');
+      answers.forEach(a => {
+        if (!a.machine_name) return;
+        if (!accMap[a.machine_name]) accMap[a.machine_name] = { c: 0, t: 0 };
+        accMap[a.machine_name].t++;
+        if (a.correct) accMap[a.machine_name].c++;
+      });
+    } catch (e) {}
+  }
+
+  let allQs = [];
+
+  // --- Máquinas con dificultad 50% fácil / 30% media / 20% difícil ---
+  if (mix.modelo > 0) {
+    if (pl.length < 4) { alert('Necesitas al menos 4 modelos con foto.'); return; }
+    const target = Math.max(1, Math.round(cfg.q * mix.modelo / 100));
+
+    const easy = [], medium = [], hard = [];
+    pl.forEach(m => {
+      const s = accMap[m.name];
+      if (!s || s.t < 5) { medium.push(m); return; }
+      const acc = s.c / s.t;
+      if (acc >= 0.70) easy.push(m);
+      else if (acc >= 0.40) medium.push(m);
+      else hard.push(m);
+    });
+
+    const nEasy = Math.round(target * 0.50);
+    const nMed  = Math.round(target * 0.30);
+    const nHard = target - nEasy - nMed;
+    const used = new Set();
+    const pickN = (pool, n) => {
+      const out = [];
+      for (const m of shuffle([...pool])) {
+        if (out.length >= n) break;
+        if (!used.has(m.id)) { used.add(m.id); out.push(m); }
+      }
+      return out;
+    };
+
+    let picked = [...pickN(easy, nEasy), ...pickN(medium, nMed), ...pickN(hard, nHard)];
+    if (picked.length < target) picked = [...picked, ...pickN(pl, target - picked.length)];
+
+    allQs.push(...picked.map(m => ({ source: 'machine', machine: m })));
+  }
+
+  // --- Preguntas comunitarias por tipo ---
+  const commTypes = ['falla','curiosidad','repuesto'].filter(t => mix[t] > 0);
+  if (commTypes.length > 0) {
+    try {
+      const rows = await sbGet('/rest/v1/quiz_questions?status=eq.approved&type=in.(' + commTypes.join(',') + ')&limit=500');
+      commTypes.forEach(type => {
+        const target = Math.max(1, Math.round(cfg.q * mix[type] / 100));
+        shuffle(rows.filter(r => r.type === type)).slice(0, target).forEach(r => {
+          allQs.push({ source: 'community', id: r.id, type: r.type, image_url: r.image_url,
+            question_text: r.question_text, correct_answer: r.correct_answer,
+            options: shuffle([r.correct_answer, r.option_b, r.option_c, r.option_d]) });
+        });
+      });
     } catch (e) {}
   }
 
   allQs = shuffle(allQs);
-  if (allQs.length < 4) {
-    alert('No hay suficientes preguntas disponibles para este tipo de quiz.');
-    return;
-  }
+  if (allQs.length < 4) { alert('No hay suficientes preguntas disponibles.'); return; }
 
-  const cnt = Math.min(cfg.q, allQs.length);
-  qQuestionQueue = allQs.slice(0, cnt);
+  qQuestionQueue = allQs.slice(0, Math.min(cfg.q, allQs.length));
   qTotal = qQuestionQueue.length;
   qNum = 0; qCorrect = 0; qWrong = 0; qScore = 0; qCurrentQ = null;
 
@@ -406,9 +531,11 @@ async function endQuiz() {
   document.getElementById('r-name').textContent = playerName;
 
   const targetMax = qTotal <= 5 ? (maxPtsConfig[5] || 1000) : qTotal <= 10 ? (maxPtsConfig[10] || 1200) : (maxPtsConfig[20] || 1300);
-  let normalizedScore = Math.round(qScore * targetMax / (qTotal * 100));
+  const _diffMult = (DIFFICULTIES[cfg.diff] || DIFFICULTIES.normal).finalMult;
+  let normalizedScore = Math.round(qScore * targetMax / (qTotal * 100) * _diffMult);
 
-  document.getElementById('r-sub').textContent = qCorrect + ' correctas de ' + qTotal + ' · ' + cfg.t + 's';
+  const _diffLabel = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil' }[cfg.diff] || 'Normal';
+  document.getElementById('r-sub').textContent = qCorrect + ' correctas de ' + qTotal + ' · ' + _diffLabel;
   document.getElementById('r-ok').textContent = qCorrect;
   document.getElementById('r-err').textContent = qWrong;
   document.getElementById('r-acc').textContent = acc + '%';
@@ -431,7 +558,9 @@ let _sdPts = 0;
 async function checkSuddenDeath(score) {
   if (!compState.active || !compState.compId || score <= 0) return score;
   try {
-    const maxPts = qTotal <= 5 ? (maxPtsConfig[5] || 1000) : qTotal <= 10 ? (maxPtsConfig[10] || 1200) : (maxPtsConfig[20] || 1300);
+    const maxPtsBase = qTotal <= 5 ? (maxPtsConfig[5] || 1000) : qTotal <= 10 ? (maxPtsConfig[10] || 1200) : (maxPtsConfig[20] || 1300);
+    const _sdDiffMult = (DIFFICULTIES[cfg.diff] || DIFFICULTIES.normal).finalMult;
+    const maxPts = Math.round(maxPtsBase * _sdDiffMult);
     const top = await sbGet('/rest/v1/scores?season=eq.' + encodeURIComponent(compState.compId) + '&completed=eq.true&order=pts.desc&limit=1');
     const tiesFirst = top.length > 0 && score >= top[0].pts;
     if (tiesFirst || score >= maxPts) return await runSuddenDeath(score);
