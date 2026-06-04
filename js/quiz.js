@@ -307,48 +307,95 @@ async function startQuiz() {
     return;
   }
 
-  let quizType = 'modelo';
-  try {
-    const rows = await sbGet('/rest/v1/settings?key=eq.quiz_type_current');
-    quizType = rows[0]?.value || 'modelo';
-  } catch (e) {}
-  if (!compState.active && cfg.type) quizType = cfg.type;
-
   const pl = MACHINES.filter(m => m.photo_url);
-  let allQs = [];
 
-  if (quizType === 'modelo' || quizType === 'todo') {
-    if (pl.length < 4 && quizType === 'modelo') {
-      alert('Necesitas al menos 4 modelos con foto.');
-      return;
-    }
-    allQs.push(...shuffle([...pl]).map(m => ({ source: 'machine', machine: m })));
+  // --- Determinar mix de tipos ---
+  let mix = { modelo: 100, falla: 0, curiosidad: 0, repuesto: 0 };
+  if (compState.active) {
+    try {
+      const rows = await sbGet('/rest/v1/settings?key=eq.quiz_type_mix');
+      if (rows[0]) mix = JSON.parse(rows[0].value);
+    } catch (e) {}
+  } else if (cfg.type === 'todo') {
+    try {
+      const rows = await sbGet('/rest/v1/settings?key=eq.quiz_type_mix');
+      if (rows[0]) mix = JSON.parse(rows[0].value);
+    } catch (e) {}
+  } else if (cfg.type) {
+    mix = { modelo: 0, falla: 0, curiosidad: 0, repuesto: 0 };
+    mix[cfg.type] = 100;
   }
 
-  if (quizType !== 'modelo') {
-    const types = quizType === 'todo' ? 'falla,curiosidad,repuesto' : quizType;
+  // --- Precisión histórica por máquina ---
+  const accMap = {};
+  if (mix.modelo > 0) {
     try {
-      const rows = await sbGet('/rest/v1/quiz_questions?status=eq.approved&type=in.(' + types + ')&limit=500');
-      allQs.push(...rows.map(r => ({
-        source: 'community',
-        id: r.id,
-        type: r.type,
-        image_url: r.image_url,
-        question_text: r.question_text,
-        correct_answer: r.correct_answer,
-        options: shuffle([r.correct_answer, r.option_b, r.option_c, r.option_d])
-      })));
+      const answers = await sbGet('/rest/v1/quiz_answers?order=id.desc&limit=3000');
+      answers.forEach(a => {
+        if (!a.machine_name) return;
+        if (!accMap[a.machine_name]) accMap[a.machine_name] = { c: 0, t: 0 };
+        accMap[a.machine_name].t++;
+        if (a.correct) accMap[a.machine_name].c++;
+      });
+    } catch (e) {}
+  }
+
+  let allQs = [];
+
+  // --- Máquinas con dificultad 50% fácil / 30% media / 20% difícil ---
+  if (mix.modelo > 0) {
+    if (pl.length < 4) { alert('Necesitas al menos 4 modelos con foto.'); return; }
+    const target = Math.max(1, Math.round(cfg.q * mix.modelo / 100));
+
+    const easy = [], medium = [], hard = [];
+    pl.forEach(m => {
+      const s = accMap[m.name];
+      if (!s || s.t < 5) { medium.push(m); return; }
+      const acc = s.c / s.t;
+      if (acc >= 0.70) easy.push(m);
+      else if (acc >= 0.40) medium.push(m);
+      else hard.push(m);
+    });
+
+    const nEasy = Math.round(target * 0.50);
+    const nMed  = Math.round(target * 0.30);
+    const nHard = target - nEasy - nMed;
+    const used = new Set();
+    const pickN = (pool, n) => {
+      const out = [];
+      for (const m of shuffle([...pool])) {
+        if (out.length >= n) break;
+        if (!used.has(m.id)) { used.add(m.id); out.push(m); }
+      }
+      return out;
+    };
+
+    let picked = [...pickN(easy, nEasy), ...pickN(medium, nMed), ...pickN(hard, nHard)];
+    if (picked.length < target) picked = [...picked, ...pickN(pl, target - picked.length)];
+
+    allQs.push(...picked.map(m => ({ source: 'machine', machine: m })));
+  }
+
+  // --- Preguntas comunitarias por tipo ---
+  const commTypes = ['falla','curiosidad','repuesto'].filter(t => mix[t] > 0);
+  if (commTypes.length > 0) {
+    try {
+      const rows = await sbGet('/rest/v1/quiz_questions?status=eq.approved&type=in.(' + commTypes.join(',') + ')&limit=500');
+      commTypes.forEach(type => {
+        const target = Math.max(1, Math.round(cfg.q * mix[type] / 100));
+        shuffle(rows.filter(r => r.type === type)).slice(0, target).forEach(r => {
+          allQs.push({ source: 'community', id: r.id, type: r.type, image_url: r.image_url,
+            question_text: r.question_text, correct_answer: r.correct_answer,
+            options: shuffle([r.correct_answer, r.option_b, r.option_c, r.option_d]) });
+        });
+      });
     } catch (e) {}
   }
 
   allQs = shuffle(allQs);
-  if (allQs.length < 4) {
-    alert('No hay suficientes preguntas disponibles para este tipo de quiz.');
-    return;
-  }
+  if (allQs.length < 4) { alert('No hay suficientes preguntas disponibles.'); return; }
 
-  const cnt = Math.min(cfg.q, allQs.length);
-  qQuestionQueue = allQs.slice(0, cnt);
+  qQuestionQueue = allQs.slice(0, Math.min(cfg.q, allQs.length));
   qTotal = qQuestionQueue.length;
   qNum = 0; qCorrect = 0; qWrong = 0; qScore = 0; qCurrentQ = null;
 

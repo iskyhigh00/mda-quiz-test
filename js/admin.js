@@ -731,13 +731,32 @@ async function deleteScore(id) {
 }
 
 // ========== QUIZ TYPE CONFIG ==========
+function updateMixTotal() {
+  const total = ['modelo','falla','curiosidad','repuesto'].reduce((s, t) => {
+    return s + (parseInt(document.getElementById('mix-' + t)?.value) || 0);
+  }, 0);
+  const el = document.getElementById('mix-total');
+  if (el) {
+    el.textContent = 'Total: ' + total + '%';
+    el.style.color = total === 100 ? 'var(--green)' : 'var(--red)';
+  }
+}
+
 async function loadQuizTypeConfig() {
   try {
-    const rows = await sbGet('/rest/v1/settings?key=in.(quiz_type_current,question_instructions)');
-    const typeRow = rows.find(r => r.key === 'quiz_type_current');
+    const rows = await sbGet('/rest/v1/settings?key=in.(quiz_type_mix,question_instructions)');
+    const mixRow = rows.find(r => r.key === 'quiz_type_mix');
     const instrRow = rows.find(r => r.key === 'question_instructions');
-    const sel = document.getElementById('quiz-type-select');
-    if (sel && typeRow) sel.value = typeRow.value || 'modelo';
+    if (mixRow) {
+      try {
+        const mix = JSON.parse(mixRow.value);
+        ['modelo','falla','curiosidad','repuesto'].forEach(t => {
+          const el = document.getElementById('mix-' + t);
+          if (el) el.value = mix[t] ?? 0;
+        });
+        updateMixTotal();
+      } catch (e) {}
+    }
     const instr = document.getElementById('quiz-instructions');
     if (instr && instrRow) instr.value = instrRow.value || '';
   } catch (e) {
@@ -746,11 +765,16 @@ async function loadQuizTypeConfig() {
 }
 
 async function saveQuizConfig() {
-  const type = document.getElementById('quiz-type-select')?.value || 'modelo';
+  const mix = {};
+  ['modelo','falla','curiosidad','repuesto'].forEach(t => {
+    mix[t] = parseInt(document.getElementById('mix-' + t)?.value) || 0;
+  });
+  const total = Object.values(mix).reduce((s, v) => s + v, 0);
+  if (total !== 100) { alert('Los porcentajes deben sumar 100%. Suma actual: ' + total + '%'); return; }
   const instr = document.getElementById('quiz-instructions')?.value.trim() || '';
   try {
     await Promise.all([
-      sbFetch('/rest/v1/settings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify({ key: 'quiz_type_current', value: type }) }),
+      sbFetch('/rest/v1/settings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify({ key: 'quiz_type_mix', value: JSON.stringify(mix) }) }),
       sbFetch('/rest/v1/settings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify({ key: 'question_instructions', value: instr }) })
     ]);
     alert('Configuración guardada.');

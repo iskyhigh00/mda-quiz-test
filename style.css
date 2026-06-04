@@ -1489,6 +1489,36 @@ tbody td {
   }
 }
 
+/* ========== QUIZ TYPE MIX GRID (admin) ========== */
+.mix-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 8px;
+}
+.mix-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+  color: var(--text);
+}
+.mix-row span:first-child {
+  width: 110px;
+  flex-shrink: 0;
+}
+.mix-input {
+  width: 70px !important;
+  text-align: center;
+  padding: 6px 8px !important;
+}
+.mix-total {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--green);
+  margin-top: 4px;
+}
+
 /* ========== MODE BANNER (setup) ========== */
 .mode-banner {
   display: flex;
