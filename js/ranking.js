@@ -2,6 +2,8 @@
 // RANKING, COMPETENCIA Y GANADORES
 // ============================================
 
+let _hadCompActive = null;
+
 async function renderLeaderboard() {
   const body = document.getElementById('lb-body');
   if (!body) return;
@@ -193,16 +195,36 @@ function updateCompetitionUI() {
     if (upBtn) upBtn.style.display = 'none';
     if (info) info.innerHTML = 'La app está en modo práctica. Los puntajes no cuentan para el ranking.';
   }
+  if (_hadCompActive === false && compState.active) {
+    showNotif('🏆 Competencia activa', (compState.prize ? 'Premio: ' + compState.prize + ' · ' : '') + '¡A jugar!');
+  }
+  _hadCompActive = compState.active;
   renderCompetitionBanner();
 }
 
 function renderCompetitionBanner() {
   const w = document.getElementById('prize-banner-wrap');
-  if (!w) return;
-  if (compState.active && compState.endTime) {
-    w.innerHTML = '<div class="prize-banner"><div class="prize-icon">🏆</div><div class="prize-text">Competencia activa — Premio: ' + (compState.prize || 'por definir') + '<div id="comp-countdown" style="font-size:1.3rem;font-weight:900;color:var(--accent2);margin-top:6px;"></div></div></div>';
-  } else {
-    w.innerHTML = '<div class="prize-banner" style="border-color:var(--gold);"><div class="prize-icon">📚</div><div class="prize-text" style="color:var(--gold);">Modo práctica</div></div>';
+  if (w) {
+    if (compState.active && compState.endTime) {
+      w.innerHTML = '<div class="prize-banner"><div class="prize-icon">🏆</div><div class="prize-text">Competencia activa — Premio: ' + (compState.prize || 'por definir') + '<div id="comp-countdown" style="font-size:1.3rem;font-weight:900;color:var(--accent2);margin-top:6px;"></div></div></div>';
+    } else {
+      w.innerHTML = '<div class="prize-banner" style="border-color:var(--gold);"><div class="prize-icon">📚</div><div class="prize-text" style="color:var(--gold);">Modo práctica</div></div>';
+    }
+  }
+  const setup = document.getElementById('mode-banner-setup');
+  if (setup) {
+    if (compState.active && compState.endTime) {
+      setup.innerHTML = '<div class="mode-banner mode-comp">🏆 Competencia activa · Premio: ' + (compState.prize || '…') + '<span id="mode-banner-cd" style="margin-left:auto;font-size:0.82rem;font-weight:800;color:var(--accent2);"></span></div>';
+    } else {
+      setup.innerHTML = '<div class="mode-banner mode-practice">📚 Modo práctica · puntajes no cuentan para el ranking</div>';
+    }
+  }
+  const tg = document.getElementById('type-chips-group');
+  if (tg) {
+    tg.style.opacity = compState.active ? '0.55' : '1';
+    tg.style.pointerEvents = compState.active ? 'none' : '';
+    const lbl = tg.querySelector('.form-label');
+    if (lbl) lbl.textContent = compState.active ? 'Tipo de preguntas (fijado por admin)' : 'Tipo de preguntas';
   }
 }
 
@@ -223,7 +245,10 @@ function startCompetitionCountdown() {
     const h = Math.floor((diff % 86400000) / 3600000);
     const m = Math.floor((diff % 3600000) / 60000);
     const s = Math.floor((diff % 60000) / 1000);
-    if (el) el.textContent = (d > 0 ? d + 'd ' : '') + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    const cdStr = (d > 0 ? d + 'd ' : '') + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    if (el) el.textContent = cdStr;
+    const mbCd = document.getElementById('mode-banner-cd');
+    if (mbCd) mbCd.textContent = cdStr;
   };
   tick();
   compCountdownInt = setInterval(tick, 1000);
@@ -340,4 +365,24 @@ async function finishCompetition() {
     console.error('finishCompetition:', e);
     alert('Error: ' + e.message);
   }
+}
+
+async function loadMyHistory() {
+  const body = document.getElementById('my-history-body');
+  if (!body) return;
+  const name = playerName || localStorage.getItem('mda_user_name') || '';
+  if (!name) { body.innerHTML = '<div class="no-data">Sin nombre configurado.</div>'; return; }
+  body.innerHTML = '<div class="loading">Cargando...</div>';
+  try {
+    const rows = await sbGet('/rest/v1/scores?name=eq.' + encodeURIComponent(name) + '&order=created_at.desc&limit=50');
+    if (!rows.length) { body.innerHTML = '<div class="no-data">Aún no hay partidas para <strong>' + name + '</strong>.</div>'; return; }
+    body.innerHTML = '<table><thead><tr><th>Pts</th><th>Pregs.</th><th>Prec.</th><th>Seg.</th><th>Modo</th><th>Fecha</th></tr></thead><tbody>' +
+      rows.map(s => {
+        const d = new Date(s.created_at);
+        const f = d.toLocaleDateString('es-CL') + ' ' + d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+        const mode = s.season === 'practica' ? '<span style="color:var(--muted)">Práctica</span>' : '<span style="color:var(--gold)">🏆</span>';
+        const ok = s.completed !== false;
+        return '<tr' + (ok ? '' : ' style="opacity:0.5"') + '><td style="color:' + (ok ? 'var(--gold)' : 'var(--muted)') + ';font-weight:' + (ok ? '800' : 'normal') + ';">' + s.pts + (ok ? '' : ' ✗') + '</td><td>' + (s.total || '?') + '</td><td>' + (s.accuracy || 0) + '%</td><td>' + (s.timer_sec || '?') + 's</td><td>' + mode + '</td><td style="color:var(--muted);font-size:0.7rem">' + f + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  } catch (e) { body.innerHTML = '<div class="no-data">Error: ' + e.message + '</div>'; }
 }

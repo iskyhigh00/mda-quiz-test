@@ -166,8 +166,11 @@ function renderGalleryPhoto() {
   const at = photoAt(current);
   const meta = document.getElementById('lb-photo-meta');
   if (meta) {
-    if (by) {
-      meta.textContent = '📸 Subida por ' + by + (at ? ' el ' + new Date(at).toLocaleDateString('es-CL') : '');
+    if (by || at) {
+      const parts = [];
+      if (by) parts.push('📸 ' + by);
+      if (at) parts.push(new Date(at).toLocaleDateString('es-CL'));
+      meta.textContent = parts.join(' · ');
       meta.style.display = 'block';
     } else {
       meta.style.display = 'none';

@@ -47,9 +47,19 @@
 <!-- VISTA SETUP QUIZ -->
 <div id="view-setup" class="view">
   <div class="setup-card">
+    <div id="mode-banner-setup"></div>
     <h2>⚙️ Configurar Quiz</h2>
-    <p>5 segundos premia más la velocidad. 10 segundos da más tiempo para pensar.</p>
     <div id="no-img-warn" class="warn-box">No hay modelos con foto. Agrega fotos desde Admin.</div>
+    <div class="form-group" id="type-chips-group">
+      <label class="form-label">Tipo de preguntas</label>
+      <div class="chips chips-small">
+        <div class="chip active" onclick="pickTypeChip('todo',this)">Todo</div>
+        <div class="chip" onclick="pickTypeChip('modelo',this)">Modelos</div>
+        <div class="chip" onclick="pickTypeChip('falla',this)">Fallas</div>
+        <div class="chip" onclick="pickTypeChip('curiosidad',this)">Curiosidades</div>
+        <div class="chip" onclick="pickTypeChip('repuesto',this)">Repuestos</div>
+      </div>
+    </div>
     <div class="form-group">
       <label class="form-label">Número de preguntas</label>
       <div class="chips">
@@ -125,6 +135,10 @@
 <div id="view-ranking" class="view">
   <div id="prize-banner-wrap"></div>
   <div class="section-box"><div class="lb-head">🏆 Ranking global</div><div id="ranking-lb-body"><div class="loading">Cargando...</div></div></div>
+  <div class="section-box">
+    <div class="lb-head" style="display:flex;align-items:center;gap:8px;">👤 Mis partidas<button class="btn btn-secondary btn-sm" style="margin-left:auto" onclick="loadMyHistory()">⟳</button></div>
+    <div id="my-history-body"><div class="no-data">Presiona ⟳ para cargar.</div></div>
+  </div>
   <div class="section-box"><div class="lb-head">🏆 Historial de ganadores</div><div id="winners-history-body"><div class="loading">Cargando...</div></div></div>
 </div>
 

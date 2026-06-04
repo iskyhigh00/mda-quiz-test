@@ -31,7 +31,7 @@ body {
 }
 /* NAV - Oculto por defecto */
 nav {
-  background: linear-gradient(135deg, #0f0f1a, #1a0a2e);
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
   display: none;
   align-items: center;
@@ -1487,6 +1487,37 @@ tbody td {
   .stats-grid {
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   }
+}
+
+/* ========== MODE BANNER (setup) ========== */
+.mode-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  line-height: 1.35;
+}
+.mode-banner.mode-comp {
+  background: rgba(16,185,129,0.1);
+  border: 1px solid rgba(16,185,129,0.3);
+  color: var(--green);
+}
+.mode-banner.mode-practice {
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.25);
+  color: var(--gold);
+}
+
+/* ========== CHIPS SMALL (tipo de preguntas) ========== */
+.chips-small .chip {
+  font-size: 0.72rem;
+  padding: 5px 11px;
+  gap: 0;
 }
 
 /* ========== APORTAR PREGUNTA ========== */
