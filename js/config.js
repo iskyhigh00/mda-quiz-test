@@ -15,7 +15,7 @@ let adminUnlocked = false;
 let editingId = null;
 let photosEditingId = null;
 let modalNewFile = null;
-let cfg = { q: 5, t: 8, type: 'todo', diff: 'normal' };
+let cfg = { q: 5, t: 8, types: [], diff: 'normal' };
 
 const DIFFICULTIES = {
   facil:   { label: '🟢 Fácil',   tMachine: 15, tComm: 20, speedMult: 0.6,  finalMult: 1.0  },

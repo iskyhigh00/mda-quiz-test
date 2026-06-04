@@ -531,6 +531,12 @@ nav {
 .chip.active .chip-pts {
   opacity: 0.85;
 }
+.chip.chip-disabled {
+  opacity: 0.32;
+  cursor: default;
+}
+.chip.chip-disabled:hover { transform: none; }
+.chip.chip-disabled:active { transform: none; }
 .start-btn {
   width: 100%;
   background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent2) 55%, #000));

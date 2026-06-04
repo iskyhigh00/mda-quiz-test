@@ -8,10 +8,75 @@ function pickChip(g, v, el) {
   el.classList.add('active');
 }
 
+let _approvedQCounts = null;
+let _typeChipMsgTO = null;
+
+async function loadApprovedQCounts() {
+  try {
+    const rows = await sbGet('/rest/v1/quiz_questions?status=eq.approved&select=type');
+    _approvedQCounts = { falla: 0, curiosidad: 0, repuesto: 0 };
+    rows.forEach(r => { if (_approvedQCounts[r.type] !== undefined) _approvedQCounts[r.type]++; });
+  } catch (e) {
+    _approvedQCounts = { falla: 0, curiosidad: 0, repuesto: 0 };
+  }
+  updateTypeChipAvailability();
+}
+
+function updateTypeChipAvailability() {
+  if (!_approvedQCounts) return;
+  const MIN = 15;
+  ['falla', 'curiosidad', 'repuesto'].forEach(type => {
+    const count = _approvedQCounts[type] || 0;
+    const chipEl = document.querySelector('[data-type="' + type + '"]');
+    if (!chipEl) return;
+    chipEl.classList.toggle('chip-disabled', count < MIN);
+    chipEl.dataset.count = count;
+  });
+}
+
+function showTypeChipMsg(msg) {
+  const el = document.getElementById('type-chip-msg');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(_typeChipMsgTO);
+  _typeChipMsgTO = setTimeout(() => { el.style.display = 'none'; }, 3000);
+}
+
 function pickTypeChip(type, el) {
-  cfg.type = type;
-  el.closest('.chips').querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
+  const chips = el.closest('.chips');
+  const allChips = Array.from(chips.querySelectorAll('[data-type]'));
+  const todoChip = chips.querySelector('[data-type="todo"]');
+
+  if (el.classList.contains('chip-disabled')) {
+    const count = parseInt(el.dataset.count || '0');
+    showTypeChipMsg('Faltan preguntas aprobadas (' + count + '/15)');
+    return;
+  }
+
+  if (type === 'todo') {
+    allChips.forEach(c => c.classList.remove('active'));
+    todoChip.classList.add('active');
+    cfg.types = [];
+    return;
+  }
+
+  el.classList.toggle('active');
+
+  const enabledIndividuals = allChips.filter(c => c.dataset.type !== 'todo' && !c.classList.contains('chip-disabled'));
+  const activeEnabled = enabledIndividuals.filter(c => c.classList.contains('active'));
+
+  if (activeEnabled.length === 0) {
+    todoChip.classList.add('active');
+    cfg.types = [];
+  } else if (activeEnabled.length === enabledIndividuals.length) {
+    allChips.forEach(c => c.classList.remove('active'));
+    todoChip.classList.add('active');
+    cfg.types = [];
+  } else {
+    todoChip.classList.remove('active');
+    cfg.types = activeEnabled.map(c => c.dataset.type);
+  }
 }
 
 function pickDiffChip(diff, el) {
@@ -326,19 +391,17 @@ async function startQuiz() {
 
   // --- Determinar mix de tipos ---
   let mix = { modelo: 100, falla: 0, curiosidad: 0, repuesto: 0 };
-  if (compState.active) {
+  if (compState.active || cfg.types.length === 0) {
     try {
       const rows = await sbGet('/rest/v1/settings?key=eq.quiz_type_mix');
       if (rows[0]) mix = JSON.parse(rows[0].value);
     } catch (e) {}
-  } else if (cfg.type === 'todo') {
-    try {
-      const rows = await sbGet('/rest/v1/settings?key=eq.quiz_type_mix');
-      if (rows[0]) mix = JSON.parse(rows[0].value);
-    } catch (e) {}
-  } else if (cfg.type) {
+  } else {
     mix = { modelo: 0, falla: 0, curiosidad: 0, repuesto: 0 };
-    mix[cfg.type] = 100;
+    const pct = Math.floor(100 / cfg.types.length);
+    cfg.types.forEach(t => { mix[t] = pct; });
+    const rem = 100 - pct * cfg.types.length;
+    if (rem > 0) mix[cfg.types[0]] += rem;
   }
 
   // --- Precisión histórica por máquina ---
