@@ -14,6 +14,9 @@ const COLOR_PALETTES = {
   indigo:    { name: 'Índigo',   '--bg':'#060410','--surface':'#0c0820','--card':'#120e30','--accent':'#4338ca','--accent2':'#818cf8','--gold':'#c8a850','--green':'#34d399','--red':'#f87171','--text':'#e4e8ff','--muted':'#4a5080','--border':'#201e50' },
   ambar:     { name: 'Ámbar',    '--bg':'#120900','--surface':'#1e1000','--card':'#2e1800','--accent':'#c2410c','--accent2':'#fbbf24','--gold':'#fbbf24','--green':'#4ade80','--red':'#ef4444','--text':'#fff0d4','--muted':'#8a6030','--border':'#4a2800' },
   titanio:   { name: 'Titanio',  '--bg':'#080c0e','--surface':'#0e1418','--card':'#141e24','--accent':'#0f766e','--accent2':'#2dd4bf','--gold':'#c8a850','--green':'#4ade80','--red':'#f87171','--text':'#e4f0f0','--muted':'#3d5a5a','--border':'#0e2e30' },
+  dia:     { name: 'Día',   '--bg':'#f1f5f9','--surface':'#ffffff','--card':'#e8edf5','--accent':'#1e40af','--accent2':'#0284c7','--gold':'#b45309','--green':'#15803d','--red':'#dc2626','--text':'#1e1e30','--muted':'#64748b','--border':'#cbd5e1' },
+  latte:   { name: 'Latte', '--bg':'#fdf6ee','--surface':'#fff8f0','--card':'#faebd8','--accent':'#92400e','--accent2':'#c2410c','--gold':'#b45309','--green':'#15803d','--red':'#dc2626','--text':'#1c1410','--muted':'#78716c','--border':'#e0c9a8' },
+  menta:   { name: 'Menta', '--bg':'#f0fdf8','--surface':'#e8fff5','--card':'#d0f5e4','--accent':'#065f46','--accent2':'#0891b2','--gold':'#b45309','--green':'#15803d','--red':'#dc2626','--text':'#0a2a1e','--muted':'#4b7a65','--border':'#a7d9c0' },
 };
 
 function applyPalette(key) {
@@ -865,7 +868,7 @@ function openEditQuestion(id) {
   setVal('eq-optd', q.option_d);
   const wrap = document.getElementById('eq-img-wrap');
   if (wrap) wrap.innerHTML = q.image_url
-    ? '<img src="' + getImgUrl(q.image_url) + '" style="max-height:180px;max-width:100%;object-fit:contain;border-radius:8px;">'
+    ? '<img src="' + getImgUrl(q.image_url) + '" style="max-height:300px;max-width:100%;object-fit:contain;border-radius:8px;">'
     : '<span style="color:var(--muted);font-size:0.82rem;">Sin imagen</span>';
   const statusEl = document.getElementById('eq-status');
   if (statusEl) statusEl.style.display = 'none';

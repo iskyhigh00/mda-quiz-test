@@ -18,3 +18,6 @@ if ('serviceWorker' in navigator) {
     if (hadController) location.reload();
   });
 }
+
+// Polling de estado de competencia cada 2 minutos
+setInterval(loadCompetition, 120000);

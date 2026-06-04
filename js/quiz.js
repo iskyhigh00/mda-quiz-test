@@ -8,6 +8,12 @@ function pickChip(g, v, el) {
   el.classList.add('active');
 }
 
+function pickTypeChip(type, el) {
+  cfg.type = type;
+  el.closest('.chips').querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+
 function updateSetupChips() {
   [5, 10, 20].forEach(q => {
     const el = document.getElementById('chip-pts-' + q);
@@ -306,6 +312,7 @@ async function startQuiz() {
     const rows = await sbGet('/rest/v1/settings?key=eq.quiz_type_current');
     quizType = rows[0]?.value || 'modelo';
   } catch (e) {}
+  if (!compState.active && cfg.type) quizType = cfg.type;
 
   const pl = MACHINES.filter(m => m.photo_url);
   let allQs = [];

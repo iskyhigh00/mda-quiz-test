@@ -43,6 +43,7 @@ function goTo(v) {
     loadRanking();
     loadCompetition();
     loadWinnersHistory();
+    if (typeof loadMyHistory === 'function') loadMyHistory();
   }
   if (v === 'setup') {
     const pw = MACHINES.filter(m => m.photo_url).length;
@@ -91,6 +92,7 @@ function confirmWelcome() {
 
   _updateUserBar();
   goTo('catalog');
+  requestNotifPermission();
 }
 
 function _updateUserBar() {
@@ -110,6 +112,16 @@ function changeName() {
   localStorage.setItem('mda_user_name', trimmed);
   playerName = trimmed;
   _updateUserBar();
+}
+
+function requestNotifPermission() {
+  if (!('Notification' in window) || Notification.permission !== 'default') return;
+  Notification.requestPermission();
+}
+
+function showNotif(title, body) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  try { new Notification(title, { body, icon: './icons/icon.svg' }); } catch (e) {}
 }
 
 function toggleSection(wrapId, btnId) {
