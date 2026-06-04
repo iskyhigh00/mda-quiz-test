@@ -1119,7 +1119,9 @@ nav {
   width: 92%;
   max-height: 90vh;
   overflow-y: auto;
+  scrollbar-width: none;
 }
+.modal-box::-webkit-scrollbar { display: none; }
 .modal-title {
   font-size: 1rem;
   font-weight: 600;
