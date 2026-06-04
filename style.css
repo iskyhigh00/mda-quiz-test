@@ -1486,3 +1486,95 @@ tbody td {
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   }
 }
+
+/* ========== APORTAR PREGUNTA ========== */
+.submit-q-btn {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.18s, color 0.18s;
+  text-align: center;
+}
+.submit-q-btn:active {
+  transform: scale(0.97);
+  opacity: 0.8;
+}
+.submit-q-btn:hover {
+  border-color: var(--accent2);
+  color: var(--accent2);
+}
+
+/* ========== PENDING QUESTION CARDS ========== */
+.pending-q-card {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.pending-q-card:last-child {
+  border-bottom: none;
+}
+.pending-q-img {
+  width: 90px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background: var(--surface);
+}
+.pending-q-body {
+  flex: 1;
+  min-width: 0;
+}
+.pending-q-type {
+  display: inline-block;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 5px;
+}
+.pending-q-text {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+  line-height: 1.35;
+}
+.pending-q-answers {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 6px;
+}
+.pqa {
+  font-size: 0.74rem;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pqa.correct {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--green);
+  font-weight: 700;
+}
+.pending-q-meta {
+  font-size: 0.72rem;
+  color: var(--muted);
+}

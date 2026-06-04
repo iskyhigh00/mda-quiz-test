@@ -47,6 +47,7 @@ async function adminLogin() {
     loadResetConfig();
     loadMaxPts();
     loadCompetition();
+    loadQuizTypeConfig();
     return;
   }
   const input = prompt('Clave:');
@@ -58,6 +59,7 @@ async function adminLogin() {
     loadResetConfig();
     loadMaxPts();
     loadCompetition();
+    loadQuizTypeConfig();
   } else {
     alert('Clave incorrecta.');
   }
@@ -75,6 +77,8 @@ function adminTab(tab) {
     loadWinnersMgmt();
     loadNotesMgmt();
   }
+  if (tab === 'preguntas') loadPendingQuestions();
+  if (tab === 'competencia') { loadQuizTypeConfig(); }
 }
 
 function renderAdmin() {
@@ -720,5 +724,192 @@ async function deleteScore(id) {
     renderScoresMgmt();
   } catch (e) {
     alert('Error: ' + e.message);
+  }
+}
+
+// ========== QUIZ TYPE CONFIG ==========
+async function loadQuizTypeConfig() {
+  try {
+    const rows = await sbGet('/rest/v1/settings?key=in.(quiz_type_current,question_instructions)');
+    const typeRow = rows.find(r => r.key === 'quiz_type_current');
+    const instrRow = rows.find(r => r.key === 'question_instructions');
+    const sel = document.getElementById('quiz-type-select');
+    if (sel && typeRow) sel.value = typeRow.value || 'modelo';
+    const instr = document.getElementById('quiz-instructions');
+    if (instr && instrRow) instr.value = instrRow.value || '';
+  } catch (e) {
+    console.error('loadQuizTypeConfig:', e);
+  }
+}
+
+async function saveQuizConfig() {
+  const type = document.getElementById('quiz-type-select')?.value || 'modelo';
+  const instr = document.getElementById('quiz-instructions')?.value.trim() || '';
+  try {
+    await Promise.all([
+      sbFetch('/rest/v1/settings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify({ key: 'quiz_type_current', value: type }) }),
+      sbFetch('/rest/v1/settings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify({ key: 'question_instructions', value: instr }) })
+    ]);
+    alert('Configuración guardada.');
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+// ========== PREGUNTAS COMUNITARIAS (ADMIN) ==========
+let _pqFilter = 'pending';
+
+async function loadPendingQuestions() {
+  const list = document.getElementById('pending-q-list');
+  if (!list) return;
+  list.innerHTML = '<div class="loading">Cargando...</div>';
+  try {
+    const all = await sbGet('/rest/v1/quiz_questions?order=created_at.desc&limit=200');
+    pendingQuestions = all.filter(q => q.status === 'pending');
+    approvedQuestions = all.filter(q => q.status === 'approved');
+    const badge = document.getElementById('pending-q-badge');
+    if (badge) {
+      badge.textContent = pendingQuestions.length;
+      badge.style.display = pendingQuestions.length ? '' : 'none';
+    }
+    renderPendingQuestions(all);
+  } catch (e) {
+    list.innerHTML = '<div class="no-data">Error: ' + e.message + '</div>';
+  }
+}
+
+function filterPendingQ(status) {
+  _pqFilter = status;
+  ['pending', 'approved', 'rejected'].forEach(s => {
+    const btn = document.getElementById('pq-filter-' + s);
+    if (btn) btn.style.opacity = s === status ? '1' : '0.5';
+  });
+  loadPendingQuestions();
+}
+
+function renderPendingQuestions(all) {
+  const list = document.getElementById('pending-q-list');
+  if (!list) return;
+  const filtered = (all || []).filter(q => q.status === _pqFilter);
+  if (!filtered.length) {
+    list.innerHTML = '<div class="no-data">Sin preguntas en este estado.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  filtered.forEach(q => {
+    const card = document.createElement('div');
+    card.className = 'pending-q-card';
+    const typeLabel = { falla: 'Falla', curiosidad: 'Curiosidad', repuesto: 'Repuesto', modelo: 'Modelo' }[q.type] || q.type;
+    const date = new Date(q.created_at).toLocaleDateString('es-CL');
+    const imgHtml = q.image_url
+      ? '<img class="pending-q-img" src="' + getImgUrl(q.image_url) + '" onerror="this.style.display=\'none\'">'
+      : '';
+    const answers = [
+      { text: q.correct_answer, correct: true },
+      { text: q.option_b, correct: false },
+      { text: q.option_c, correct: false },
+      { text: q.option_d, correct: false }
+    ];
+    card.innerHTML =
+      imgHtml +
+      '<div class="pending-q-body">' +
+        '<span class="pending-q-type">' + typeLabel + '</span>' +
+        '<div class="pending-q-text">' + q.question_text.replace(/</g, '&lt;') + '</div>' +
+        '<div class="pending-q-answers">' +
+          answers.map(a => '<div class="pqa' + (a.correct ? ' correct' : '') + '">' + a.text.replace(/</g, '&lt;') + '</div>').join('') +
+        '</div>' +
+        '<div class="pending-q-meta">Por <strong>' + (q.submitted_by_display || '?') + '</strong> · ' + date + '</div>' +
+        '<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">' +
+          (q.status === 'pending' ? '<button class="btn btn-primary btn-sm" onclick="quickApproveQuestion(' + q.id + ')">✅ Aprobar</button>' : '') +
+          '<button class="btn btn-secondary btn-sm" onclick="openEditQuestion(' + q.id + ')">✏️ Editar</button>' +
+          (q.status !== 'rejected' ? '<button class="btn btn-danger btn-sm" onclick="rejectQuestion(' + q.id + ')">❌ Rechazar</button>' : '') +
+        '</div>' +
+      '</div>';
+    list.appendChild(card);
+  });
+}
+
+async function quickApproveQuestion(id) {
+  try {
+    const r = await sbPatch('/rest/v1/quiz_questions?id=eq.' + id, { status: 'approved' });
+    if (!r.ok) { const e = await r.text(); alert('Error: ' + e); return; }
+    await loadPendingQuestions();
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+async function rejectQuestion(id) {
+  if (!confirm('¿Rechazar esta pregunta?')) return;
+  try {
+    const r = await sbPatch('/rest/v1/quiz_questions?id=eq.' + id, { status: 'rejected' });
+    if (!r.ok) { const e = await r.text(); alert('Error: ' + e); return; }
+    closeModal('modal-edit-q');
+    await loadPendingQuestions();
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+function openEditQuestion(id) {
+  const all = [...pendingQuestions, ...approvedQuestions];
+  const q = all.find(x => x.id === id) || { id };
+  _editingQuestionId = id;
+  const sel = document.getElementById('eq-type');
+  if (sel) sel.value = q.type || 'falla';
+  const setVal = (elId, val) => { const el = document.getElementById(elId); if (el) el.value = val || ''; };
+  setVal('eq-question', q.question_text);
+  setVal('eq-correct', q.correct_answer);
+  setVal('eq-optb', q.option_b);
+  setVal('eq-optc', q.option_c);
+  setVal('eq-optd', q.option_d);
+  const wrap = document.getElementById('eq-img-wrap');
+  if (wrap) wrap.innerHTML = q.image_url
+    ? '<img src="' + getImgUrl(q.image_url) + '" style="max-height:180px;max-width:100%;object-fit:contain;border-radius:8px;">'
+    : '<span style="color:var(--muted);font-size:0.82rem;">Sin imagen</span>';
+  const statusEl = document.getElementById('eq-status');
+  if (statusEl) statusEl.style.display = 'none';
+  openModal('modal-edit-q');
+}
+
+async function saveEditedQuestion() {
+  if (!_editingQuestionId) return;
+  const type = document.getElementById('eq-type')?.value;
+  const question_text = document.getElementById('eq-question')?.value.trim();
+  const correct_answer = document.getElementById('eq-correct')?.value.trim();
+  const option_b = document.getElementById('eq-optb')?.value.trim();
+  const option_c = document.getElementById('eq-optc')?.value.trim();
+  const option_d = document.getElementById('eq-optd')?.value.trim();
+  if (!question_text || !correct_answer || !option_b || !option_c || !option_d) {
+    alert('Completa todos los campos.');
+    return;
+  }
+  const statusEl = document.getElementById('eq-status');
+  statusEl.style.display = 'block';
+  statusEl.style.color = 'var(--accent2)';
+  statusEl.textContent = 'Guardando...';
+  try {
+    const r = await sbPatch('/rest/v1/quiz_questions?id=eq.' + _editingQuestionId, { type, question_text, correct_answer, option_b, option_c, option_d });
+    if (!r.ok) { const e = await r.text(); throw new Error(e); }
+    statusEl.textContent = '✓ Guardado.';
+    statusEl.style.color = 'var(--green)';
+    await loadPendingQuestions();
+    setTimeout(() => { statusEl.style.display = 'none'; }, 1500);
+  } catch (e) {
+    statusEl.textContent = 'Error: ' + e.message;
+    statusEl.style.color = 'var(--red)';
+  }
+}
+
+async function approveEditedQuestion() {
+  await saveEditedQuestion();
+  const statusEl = document.getElementById('eq-status');
+  if (statusEl && statusEl.style.color === 'var(--red)') return;
+  try {
+    await sbPatch('/rest/v1/quiz_questions?id=eq.' + _editingQuestionId, { status: 'approved' });
+    await loadPendingQuestions();
+    closeModal('modal-edit-q');
+  } catch (e) {
+    if (statusEl) { statusEl.style.display = 'block'; statusEl.style.color = 'var(--red)'; statusEl.textContent = 'Error: ' + e.message; }
   }
 }

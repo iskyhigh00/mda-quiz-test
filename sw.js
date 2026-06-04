@@ -14,6 +14,7 @@ const SHELL = [
   './js/catalog.js',
   './js/quiz.js',
   './js/ranking.js',
+  './js/questions.js',
   './js/admin.js',
   './js/main.js'
 ];
