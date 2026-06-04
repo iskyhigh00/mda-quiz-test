@@ -203,7 +203,7 @@ nav {
 /* Grid catálogo */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: 12px;
 }
 .card {
@@ -222,7 +222,7 @@ nav {
 }
 .card-img {
   width: 100%;
-  aspect-ratio: 3/4;
+  aspect-ratio: 2/3;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -250,7 +250,7 @@ nav {
   font-weight: 500;
   font-size: 0.75rem;
   text-align: center;
-  background: linear-gradient(180deg, var(--card), #0f0f1a);
+  background: var(--card);
   color: var(--text);
 }
 /* Lightbox */
@@ -531,6 +531,12 @@ nav {
 .chip.active .chip-pts {
   opacity: 0.85;
 }
+.chip.chip-disabled {
+  opacity: 0.32;
+  cursor: default;
+}
+.chip.chip-disabled:hover { transform: none; }
+.chip.chip-disabled:active { transform: none; }
 .start-btn {
   width: 100%;
   background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent2) 55%, #000));

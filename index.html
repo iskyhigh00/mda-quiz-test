@@ -53,12 +53,13 @@
     <div class="form-group" id="type-chips-group">
       <label class="form-label">Tipo de preguntas</label>
       <div class="chips chips-small">
-        <div class="chip active" onclick="pickTypeChip('todo',this)">Todo</div>
-        <div class="chip" onclick="pickTypeChip('modelo',this)">Modelos</div>
-        <div class="chip" onclick="pickTypeChip('falla',this)">Fallas</div>
-        <div class="chip" onclick="pickTypeChip('curiosidad',this)">Curiosidades</div>
-        <div class="chip" onclick="pickTypeChip('repuesto',this)">Repuestos</div>
+        <div class="chip active" data-type="todo" onclick="pickTypeChip('todo',this)">Todo</div>
+        <div class="chip" data-type="modelo" onclick="pickTypeChip('modelo',this)">Modelos</div>
+        <div class="chip" data-type="falla" onclick="pickTypeChip('falla',this)">Fallas</div>
+        <div class="chip" data-type="curiosidad" onclick="pickTypeChip('curiosidad',this)">Curiosidades</div>
+        <div class="chip" data-type="repuesto" onclick="pickTypeChip('repuesto',this)">Repuestos</div>
       </div>
+      <div id="type-chip-msg" style="display:none;font-size:0.72rem;color:var(--red);padding:4px 2px;"></div>
     </div>
     <div class="form-group">
       <label class="form-label">Número de preguntas</label>
@@ -69,10 +70,11 @@
       </div>
     </div>
     <div class="form-group">
-      <label class="form-label">Segundos por pregunta</label>
+      <label class="form-label">Dificultad</label>
       <div class="chips">
-        <div class="chip active" onclick="pickChip('t',5,this)">⚡ 5s</div>
-        <div class="chip" onclick="pickChip('t',10,this)">10s</div>
+        <div class="chip" onclick="pickDiffChip('facil',this)">🟢 Fácil</div>
+        <div class="chip active" onclick="pickDiffChip('normal',this)">🟡 Normal</div>
+        <div class="chip" onclick="pickDiffChip('dificil',this)">🔴 Difícil</div>
       </div>
     </div>
     <button class="start-btn" onclick="startQuiz()">▶ Comenzar</button>

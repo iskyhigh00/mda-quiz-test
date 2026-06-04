@@ -8,16 +8,91 @@ function pickChip(g, v, el) {
   el.classList.add('active');
 }
 
-function pickTypeChip(type, el) {
-  cfg.type = type;
-  el.closest('.chips').querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
+let _approvedQCounts = null;
+let _typeChipMsgTO = null;
+
+async function loadApprovedQCounts() {
+  try {
+    const rows = await sbGet('/rest/v1/quiz_questions?status=eq.approved&select=type');
+    _approvedQCounts = { falla: 0, curiosidad: 0, repuesto: 0 };
+    rows.forEach(r => { if (_approvedQCounts[r.type] !== undefined) _approvedQCounts[r.type]++; });
+  } catch (e) {
+    _approvedQCounts = { falla: 0, curiosidad: 0, repuesto: 0 };
+  }
+  updateTypeChipAvailability();
 }
 
+function updateTypeChipAvailability() {
+  if (!_approvedQCounts) return;
+  const MIN = 15;
+  ['falla', 'curiosidad', 'repuesto'].forEach(type => {
+    const count = _approvedQCounts[type] || 0;
+    const chipEl = document.querySelector('[data-type="' + type + '"]');
+    if (!chipEl) return;
+    chipEl.classList.toggle('chip-disabled', count < MIN);
+    chipEl.dataset.count = count;
+  });
+}
+
+function showTypeChipMsg(msg) {
+  const el = document.getElementById('type-chip-msg');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(_typeChipMsgTO);
+  _typeChipMsgTO = setTimeout(() => { el.style.display = 'none'; }, 3000);
+}
+
+function pickTypeChip(type, el) {
+  const chips = el.closest('.chips');
+  const allChips = Array.from(chips.querySelectorAll('[data-type]'));
+  const todoChip = chips.querySelector('[data-type="todo"]');
+
+  if (el.classList.contains('chip-disabled')) {
+    const count = parseInt(el.dataset.count || '0');
+    showTypeChipMsg('Faltan preguntas aprobadas (' + count + '/15)');
+    return;
+  }
+
+  if (type === 'todo') {
+    allChips.forEach(c => c.classList.remove('active'));
+    todoChip.classList.add('active');
+    cfg.types = [];
+    return;
+  }
+
+  el.classList.toggle('active');
+
+  const enabledIndividuals = allChips.filter(c => c.dataset.type !== 'todo' && !c.classList.contains('chip-disabled'));
+  const activeEnabled = enabledIndividuals.filter(c => c.classList.contains('active'));
+
+  if (activeEnabled.length === 0) {
+    todoChip.classList.add('active');
+    cfg.types = [];
+  } else if (activeEnabled.length === enabledIndividuals.length) {
+    allChips.forEach(c => c.classList.remove('active'));
+    todoChip.classList.add('active');
+    cfg.types = [];
+  } else {
+    todoChip.classList.remove('active');
+    cfg.types = activeEnabled.map(c => c.dataset.type);
+  }
+}
+
+function pickDiffChip(diff, el) {
+  cfg.diff = diff;
+  el.closest('.chips').querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  updateSetupChips();
+}
+
+
 function updateSetupChips() {
+  const d = DIFFICULTIES[cfg.diff] || DIFFICULTIES.normal;
   [5, 10, 20].forEach(q => {
     const el = document.getElementById('chip-pts-' + q);
-    if (el) el.textContent = '≤ ' + (maxPtsConfig[q] || (q === 5 ? 1000 : q === 10 ? 1200 : 1300)) + ' pts';
+    const base = maxPtsConfig[q] || (q === 5 ? 1000 : q === 10 ? 1200 : 1300);
+    if (el) el.textContent = '≤ ' + Math.round(base * d.finalMult) + ' pts';
   });
 }
 
@@ -26,7 +101,7 @@ function vipMult() {
 }
 
 function timerMult() {
-  return { 5: 1.0, 10: 0.7 }[cfg.t] || 1.0;
+  return (DIFFICULTIES[cfg.diff] || DIFFICULTIES.normal).speedMult;
 }
 
 function graceExtra() {
@@ -163,6 +238,11 @@ function nextQ() {
   const q = qQuestionQueue[qNum];
   qCurrentQ = q;
   qNum++;
+
+  // Set per-question time based on difficulty + question type
+  const _d = DIFFICULTIES[cfg.diff] || DIFFICULTIES.normal;
+  cfg.t = q.source === 'machine' ? _d.tMachine : _d.tComm;
+
 
   document.getElementById('prog-lbl').textContent = qNum + '/' + qTotal;
   document.getElementById('prog-bar').style.width = ((qNum - 1) / qTotal * 100) + '%';
@@ -311,19 +391,17 @@ async function startQuiz() {
 
   // --- Determinar mix de tipos ---
   let mix = { modelo: 100, falla: 0, curiosidad: 0, repuesto: 0 };
-  if (compState.active) {
+  if (compState.active || cfg.types.length === 0) {
     try {
       const rows = await sbGet('/rest/v1/settings?key=eq.quiz_type_mix');
       if (rows[0]) mix = JSON.parse(rows[0].value);
     } catch (e) {}
-  } else if (cfg.type === 'todo') {
-    try {
-      const rows = await sbGet('/rest/v1/settings?key=eq.quiz_type_mix');
-      if (rows[0]) mix = JSON.parse(rows[0].value);
-    } catch (e) {}
-  } else if (cfg.type) {
+  } else {
     mix = { modelo: 0, falla: 0, curiosidad: 0, repuesto: 0 };
-    mix[cfg.type] = 100;
+    const pct = Math.floor(100 / cfg.types.length);
+    cfg.types.forEach(t => { mix[t] = pct; });
+    const rem = 100 - pct * cfg.types.length;
+    if (rem > 0) mix[cfg.types[0]] += rem;
   }
 
   // --- Precisión histórica por máquina ---
@@ -453,9 +531,11 @@ async function endQuiz() {
   document.getElementById('r-name').textContent = playerName;
 
   const targetMax = qTotal <= 5 ? (maxPtsConfig[5] || 1000) : qTotal <= 10 ? (maxPtsConfig[10] || 1200) : (maxPtsConfig[20] || 1300);
-  let normalizedScore = Math.round(qScore * targetMax / (qTotal * 100));
+  const _diffMult = (DIFFICULTIES[cfg.diff] || DIFFICULTIES.normal).finalMult;
+  let normalizedScore = Math.round(qScore * targetMax / (qTotal * 100) * _diffMult);
 
-  document.getElementById('r-sub').textContent = qCorrect + ' correctas de ' + qTotal + ' · ' + cfg.t + 's';
+  const _diffLabel = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil' }[cfg.diff] || 'Normal';
+  document.getElementById('r-sub').textContent = qCorrect + ' correctas de ' + qTotal + ' · ' + _diffLabel;
   document.getElementById('r-ok').textContent = qCorrect;
   document.getElementById('r-err').textContent = qWrong;
   document.getElementById('r-acc').textContent = acc + '%';
@@ -478,7 +558,9 @@ let _sdPts = 0;
 async function checkSuddenDeath(score) {
   if (!compState.active || !compState.compId || score <= 0) return score;
   try {
-    const maxPts = qTotal <= 5 ? (maxPtsConfig[5] || 1000) : qTotal <= 10 ? (maxPtsConfig[10] || 1200) : (maxPtsConfig[20] || 1300);
+    const maxPtsBase = qTotal <= 5 ? (maxPtsConfig[5] || 1000) : qTotal <= 10 ? (maxPtsConfig[10] || 1200) : (maxPtsConfig[20] || 1300);
+    const _sdDiffMult = (DIFFICULTIES[cfg.diff] || DIFFICULTIES.normal).finalMult;
+    const maxPts = Math.round(maxPtsBase * _sdDiffMult);
     const top = await sbGet('/rest/v1/scores?season=eq.' + encodeURIComponent(compState.compId) + '&completed=eq.true&order=pts.desc&limit=1');
     const tiesFirst = top.length > 0 && score >= top[0].pts;
     if (tiesFirst || score >= maxPts) return await runSuddenDeath(score);
