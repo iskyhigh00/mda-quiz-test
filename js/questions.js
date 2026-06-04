@@ -5,9 +5,6 @@
 let _qSubmitFile = null;
 
 async function openSubmitQuestion() {
-  const rows = await sbGet('/rest/v1/settings?key=eq.question_instructions').catch(() => []);
-  const instructions = rows[0]?.value || 'Comparte una imagen con una pregunta y 4 alternativas. Será revisada por el administrador antes de aparecer en el quiz.';
-  document.getElementById('sq-instructions').textContent = instructions;
   document.getElementById('sq-author').value = playerName || localStorage.getItem('mda_user_name') || '';
   document.getElementById('sq-anon').checked = false;
   document.getElementById('sq-type').value = 'falla';
