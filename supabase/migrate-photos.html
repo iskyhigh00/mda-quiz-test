@@ -2,26 +2,31 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Migración de fotos — MDAs Casino</title>
+<title>Migración completa — MDAs Casino</title>
 <style>
-  body { font-family: monospace; background: #0a0a12; color: #e8e4f0; padding: 24px; max-width: 700px; margin: 0 auto; }
-  h2 { color: #06b6d4; }
-  button { background: #7c3aed; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 1rem; cursor: pointer; margin: 8px 0; }
+  body { font-family: monospace; background: #0a0a12; color: #e8e4f0; padding: 24px; max-width: 760px; margin: 0 auto; }
+  h2 { color: #06b6d4; margin-bottom: 4px; }
+  p  { color: #64748b; font-size: 0.85rem; margin-top: 4px; }
+  .row { display: flex; gap: 8px; margin: 12px 0; }
+  button { background: #7c3aed; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 0.95rem; cursor: pointer; }
   button:disabled { opacity: 0.4; cursor: not-allowed; }
-  #log { background: #12121e; border: 1px solid #2d2d4e; border-radius: 8px; padding: 16px; margin-top: 16px; min-height: 200px; max-height: 500px; overflow-y: auto; font-size: 0.82rem; white-space: pre-wrap; }
-  .ok  { color: #10b981; }
-  .err { color: #ef4444; }
-  .inf { color: #06b6d4; }
+  button.sec { background: #2d2d4e; }
+  #log { background: #12121e; border: 1px solid #2d2d4e; border-radius: 8px; padding: 16px; margin-top: 12px; min-height: 240px; max-height: 540px; overflow-y: auto; font-size: 0.8rem; line-height: 1.6; white-space: pre-wrap; }
+  .ok   { color: #10b981; }
+  .err  { color: #ef4444; }
+  .inf  { color: #06b6d4; }
   .warn { color: #f59e0b; }
+  .head { color: #c8a850; font-weight: bold; }
 </style>
 </head>
 <body>
-<h2>🔄 Migración de fotos — MDAs Casino</h2>
-<p style="color:#64748b;font-size:0.85rem;">Transfiere todas las fotos del proyecto viejo al nuevo. Abre esta página y presiona Iniciar.</p>
+<h2>🔄 Migración completa — MDAs Casino</h2>
+<p>Transfiere máquinas, notas, preguntas, puntajes, historial, fotos y settings al nuevo proyecto.</p>
 
-<button id="btn" onclick="run()">▶ Iniciar migración</button>
-<button onclick="document.getElementById('log').textContent=''" style="background:#2d2d4e;">Limpiar log</button>
-
+<div class="row">
+  <button id="btn" onclick="run()">▶ Iniciar migración completa</button>
+  <button class="sec" onclick="logEl.textContent=''">Limpiar</button>
+</div>
 <div id="log">Esperando...</div>
 
 <script>
@@ -36,18 +41,71 @@ const NEW = {
   bucket: 'mda-photos'
 };
 
+const OLD_STORAGE = `${OLD.url}/storage/v1/object/public/${OLD.bucket}/`;
+const NEW_STORAGE = `${NEW.url}/storage/v1/object/public/${NEW.bucket}/`;
+
 const logEl = document.getElementById('log');
 logEl.textContent = '';
 
 function log(msg, cls) {
-  const line = document.createElement('div');
-  if (cls) line.className = cls;
-  line.textContent = msg;
-  logEl.appendChild(line);
+  const d = document.createElement('div');
+  if (cls) d.className = cls;
+  d.textContent = msg;
+  logEl.appendChild(d);
   logEl.scrollTop = logEl.scrollHeight;
 }
 
-async function listAllFiles(prefix = '') {
+// Reemplaza dominio viejo por nuevo en una URL
+function remapUrl(url) {
+  if (!url) return url;
+  return url.replace(OLD_STORAGE, NEW_STORAGE);
+}
+
+// GET tabla completa
+async function getAll(table, extra = '') {
+  const rows = [];
+  let offset = 0;
+  while (true) {
+    const r = await fetch(`${OLD.url}/rest/v1/${table}?limit=1000&offset=${offset}${extra}`, {
+      headers: { 'apikey': OLD.key, 'Authorization': 'Bearer ' + OLD.key }
+    });
+    const data = await r.json();
+    if (!Array.isArray(data) || !data.length) break;
+    rows.push(...data);
+    if (data.length < 1000) break;
+    offset += 1000;
+  }
+  return rows;
+}
+
+// POST filas al nuevo proyecto (lotes de 100)
+async function insertAll(table, rows, headers = {}) {
+  let ok = 0;
+  for (let i = 0; i < rows.length; i += 100) {
+    const batch = rows.slice(i, i + 100);
+    const r = await fetch(`${NEW.url}/rest/v1/${table}`, {
+      method: 'POST',
+      headers: {
+        'apikey': NEW.key,
+        'Authorization': 'Bearer ' + NEW.key,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation',
+        ...headers
+      },
+      body: JSON.stringify(batch)
+    });
+    if (!r.ok) {
+      const txt = await r.text();
+      throw new Error(`${table}: HTTP ${r.status} — ${txt}`);
+    }
+    const inserted = await r.json();
+    ok += inserted.length;
+  }
+  return ok;
+}
+
+// Lista recursiva de archivos en bucket
+async function listFiles(prefix = '') {
   const all = [];
   let offset = 0;
   while (true) {
@@ -57,15 +115,14 @@ async function listAllFiles(prefix = '') {
       body: JSON.stringify({ prefix, limit: 1000, offset, sortBy: { column: 'name', order: 'asc' } })
     });
     const data = await r.json();
-    if (!Array.isArray(data) || data.length === 0) break;
-    // Si hay subcarpetas (metadata null = carpeta), las recursamos
+    if (!Array.isArray(data) || !data.length) break;
     for (const item of data) {
+      const path = prefix ? prefix + '/' + item.name : item.name;
       if (!item.metadata) {
-        // es carpeta
-        const sub = await listAllFiles(prefix ? prefix + '/' + item.name : item.name);
+        const sub = await listFiles(path);
         all.push(...sub);
       } else {
-        all.push(prefix ? prefix + '/' + item.name : item.name);
+        all.push(path);
       }
     }
     if (data.length < 1000) break;
@@ -77,71 +134,188 @@ async function listAllFiles(prefix = '') {
 async function run() {
   document.getElementById('btn').disabled = true;
   logEl.textContent = '';
+  let totalOk = 0, totalFail = 0;
 
   try {
-    log('📋 Listando archivos en bucket antiguo...', 'inf');
-    const files = await listAllFiles();
-    log(`   ${files.length} archivos encontrados`, 'inf');
+    // ============================================================
+    log('━━━━ FASE 1: FOTOS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'head');
+    log('Listando archivos en bucket antiguo...', 'inf');
+    const files = await listFiles();
+    log(`${files.length} archivos encontrados`, 'inf');
 
-    if (files.length === 0) {
-      log('⚠️  No hay archivos en el bucket antiguo.', 'warn');
-      document.getElementById('btn').disabled = false;
-      return;
-    }
-
-    let ok = 0, fail = 0;
-
+    let photoOk = 0, photoFail = 0;
     for (let i = 0; i < files.length; i++) {
       const filename = files[i];
-      log(`[${i+1}/${files.length}] Procesando: ${filename}`);
-
-      // Descargar del bucket viejo
-      let blob;
+      log(`[${i+1}/${files.length}] ${filename}`);
       try {
-        const dlUrl = `${OLD.url}/storage/v1/object/public/${OLD.bucket}/${filename}`;
-        const dlRes = await fetch(dlUrl);
-        if (!dlRes.ok) throw new Error('HTTP ' + dlRes.status);
-        blob = await dlRes.blob();
-      } catch(e) {
-        log(`  ❌ Error descargando: ${e.message}`, 'err');
-        fail++;
-        continue;
-      }
-
-      // Subir al bucket nuevo
-      try {
-        const upRes = await fetch(`${NEW.url}/storage/v1/object/${NEW.bucket}/${filename}`, {
+        const dl = await fetch(`${OLD.url}/storage/v1/object/public/${OLD.bucket}/${filename}`);
+        if (!dl.ok) throw new Error('HTTP ' + dl.status);
+        const blob = await dl.blob();
+        const up = await fetch(`${NEW.url}/storage/v1/object/${NEW.bucket}/${filename}`, {
           method: 'POST',
-          headers: {
-            'apikey': NEW.key,
-            'Authorization': 'Bearer ' + NEW.key,
-            'Content-Type': blob.type || 'image/jpeg',
-            'x-upsert': 'true'
-          },
+          headers: { 'apikey': NEW.key, 'Authorization': 'Bearer ' + NEW.key,
+                     'Content-Type': blob.type || 'image/jpeg', 'x-upsert': 'true' },
           body: blob
         });
-        if (!upRes.ok) {
-          const txt = await upRes.text();
-          throw new Error('HTTP ' + upRes.status + ': ' + txt);
-        }
-        log(`  ✅ OK`, 'ok');
-        ok++;
+        if (!up.ok) { const t = await up.text(); throw new Error('upload HTTP ' + up.status + ': ' + t); }
+        log('  ✅ copiada', 'ok');
+        photoOk++;
       } catch(e) {
-        log(`  ❌ Error subiendo: ${e.message}`, 'err');
-        fail++;
+        log('  ❌ ' + e.message, 'err');
+        photoFail++;
+      }
+    }
+    log(`Fotos: ${photoOk} OK, ${photoFail} errores`, photoFail ? 'warn' : 'ok');
+    totalOk += photoOk; totalFail += photoFail;
+
+    // ============================================================
+    log('', '');
+    log('━━━━ FASE 2: MÁQUINAS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'head');
+    const machines = await getAll('machines', '&order=id.asc');
+    log(`${machines.length} máquinas encontradas`, 'inf');
+
+    const idMap = {}; // old_id → new_id
+
+    for (const m of machines) {
+      const oldId = m.id;
+      // Remap photo URL
+      const newPhotoUrl = remapUrl(m.photo_url);
+      // Remap photo_urls JSON array
+      let newPhotoUrls = '[]';
+      try {
+        const arr = JSON.parse(m.photo_urls || '[]');
+        const remapped = arr.map(p => {
+          if (typeof p === 'string') return remapUrl(p);
+          if (p && p.url) return { ...p, url: remapUrl(p.url) };
+          return p;
+        });
+        newPhotoUrls = JSON.stringify(remapped);
+      } catch(e) {}
+
+      const r = await fetch(`${NEW.url}/rest/v1/machines`, {
+        method: 'POST',
+        headers: { 'apikey': NEW.key, 'Authorization': 'Bearer ' + NEW.key,
+                   'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+        body: JSON.stringify({ name: m.name, sort_order: m.sort_order, photo_url: newPhotoUrl, photo_urls: newPhotoUrls })
+      });
+      if (!r.ok) { const t = await r.text(); log(`  ❌ ${m.name}: ${t}`, 'err'); totalFail++; continue; }
+      const inserted = await r.json();
+      idMap[oldId] = inserted[0].id;
+      log(`  ✅ ${m.name} (${oldId} → ${inserted[0].id})`, 'ok');
+      totalOk++;
+    }
+
+    // ============================================================
+    log('', '');
+    log('━━━━ FASE 3: NOTAS DE MÁQUINAS ━━━━━━━━━━━━━━━━━━━━', 'head');
+    const notes = await getAll('machine_notes', '&order=id.asc');
+    log(`${notes.length} notas encontradas`, 'inf');
+    if (notes.length) {
+      const mapped = notes.map(n => ({
+        machine_id: idMap[n.machine_id] || null,
+        note: n.note, author: n.author, created_at: n.created_at
+      })).filter(n => n.machine_id);
+      const n = await insertAll('machine_notes', mapped);
+      log(`✅ ${n} notas migradas`, 'ok');
+      totalOk += n;
+    }
+
+    // ============================================================
+    log('', '');
+    log('━━━━ FASE 4: PREGUNTAS DE QUIZ ━━━━━━━━━━━━━━━━━━━━', 'head');
+    const questions = await getAll('quiz_questions', '&order=id.asc');
+    log(`${questions.length} preguntas encontradas`, 'inf');
+    if (questions.length) {
+      const mapped = questions.map(q => ({
+        type: q.type, image_url: remapUrl(q.image_url),
+        question_text: q.question_text, correct_answer: q.correct_answer,
+        option_b: q.option_b, option_c: q.option_c, option_d: q.option_d,
+        submitted_by_display: q.submitted_by_display, submitted_by_real: q.submitted_by_real,
+        status: q.status, machine_id: q.machine_id ? (idMap[q.machine_id] || null) : null,
+        created_at: q.created_at
+      }));
+      const n = await insertAll('quiz_questions', mapped);
+      log(`✅ ${n} preguntas migradas`, 'ok');
+      totalOk += n;
+    }
+
+    // ============================================================
+    log('', '');
+    log('━━━━ FASE 5: PUNTAJES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'head');
+    const scores = await getAll('scores', '&order=id.asc');
+    log(`${scores.length} puntajes encontrados`, 'inf');
+    if (scores.length) {
+      const mapped = scores.map(s => ({
+        name: s.name, pts: s.pts, correct: s.correct, total: s.total,
+        timer_sec: s.timer_sec, accuracy: s.accuracy, completed: s.completed,
+        season: s.season, created_at: s.created_at
+      }));
+      const n = await insertAll('scores', mapped);
+      log(`✅ ${n} puntajes migrados`, 'ok');
+      totalOk += n;
+    }
+
+    // ============================================================
+    log('', '');
+    log('━━━━ FASE 6: RESPUESTAS DE QUIZ ━━━━━━━━━━━━━━━━━━━', 'head');
+    const answers = await getAll('quiz_answers', '&order=id.asc');
+    log(`${answers.length} respuestas encontradas`, 'inf');
+    if (answers.length) {
+      const mapped = answers.map(a => ({
+        player_name: a.player_name, machine_name: a.machine_name, correct: a.correct,
+        time_ms: a.time_ms, pts: a.pts, timer_sec: a.timer_sec,
+        season: a.season, created_at: a.created_at
+      }));
+      const n = await insertAll('quiz_answers', mapped);
+      log(`✅ ${n} respuestas migradas`, 'ok');
+      totalOk += n;
+    }
+
+    // ============================================================
+    log('', '');
+    log('━━━━ FASE 7: HISTORIAL DE GANADORES ━━━━━━━━━━━━━━━', 'head');
+    const winners = await getAll('winners_history', '&order=id.asc');
+    log(`${winners.length} ganadores encontrados`, 'inf');
+    if (winners.length) {
+      const mapped = winners.map(w => ({
+        period_label: w.period_label, reset_date: w.reset_date, rank: w.rank,
+        player_name: w.player_name, pts: w.pts, accuracy: w.accuracy,
+        timer_sec: w.timer_sec, prize: w.prize, season_ref: w.season_ref,
+        created_at: w.created_at
+      }));
+      const n = await insertAll('winners_history', mapped);
+      log(`✅ ${n} registros migrados`, 'ok');
+      totalOk += n;
+    }
+
+    // ============================================================
+    log('', '');
+    log('━━━━ FASE 8: SETTINGS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'head');
+    const settings = await getAll('settings');
+    log(`${settings.length} settings encontrados`, 'inf');
+    if (settings.length) {
+      // Upsert uno a uno para respetar ON CONFLICT
+      for (const s of settings) {
+        const r = await fetch(`${NEW.url}/rest/v1/settings`, {
+          method: 'POST',
+          headers: { 'apikey': NEW.key, 'Authorization': 'Bearer ' + NEW.key,
+                     'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+          body: JSON.stringify({ key: s.key, value: s.value })
+        });
+        if (r.ok) { log(`  ✅ ${s.key} = ${s.value.substring(0,40)}`, 'ok'); totalOk++; }
+        else { const t = await r.text(); log(`  ❌ ${s.key}: ${t}`, 'err'); totalFail++; }
       }
     }
 
+    // ============================================================
     log('', '');
-    log(`🎉 Migración completada: ${ok} OK, ${fail} errores`, ok > 0 && fail === 0 ? 'ok' : 'warn');
-
-    if (ok > 0) {
-      log('', '');
-      log('Ahora ve a la app y recarga — las fotos deberían aparecer.', 'inf');
-    }
+    log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'head');
+    log(`🎉 Migración completada: ${totalOk} elementos OK, ${totalFail} errores`, totalFail === 0 ? 'ok' : 'warn');
+    if (totalFail === 0) log('Recarga la app para ver todo.', 'inf');
 
   } catch(e) {
     log('❌ Error fatal: ' + e.message, 'err');
+    console.error(e);
   }
 
   document.getElementById('btn').disabled = false;
