@@ -3,11 +3,46 @@
 // ============================================
 
 let _qSubmitFile = null;
+let _sqMachineId = null;
+
+function toggleSqMachine() {
+  const na = document.getElementById('sq-machine-na').checked;
+  document.getElementById('sq-machine-wrap').style.display = na ? 'none' : '';
+  if (na) _sqMachineId = null;
+}
+
+function filterSqMachines() {
+  const q = document.getElementById('sq-machine-search').value.toLowerCase();
+  const list = document.getElementById('sq-machine-list');
+  const matches = MACHINES.filter(m => !q || m.name.toLowerCase().includes(q)).slice(0, 10);
+  list.innerHTML = matches.map(m =>
+    '<div onclick="selectSqMachine(' + m.id + ',\'' + m.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'") + '\')" ' +
+    'style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:0.82rem;">' +
+    m.name.replace(/</g,'&lt;') + '</div>'
+  ).join('');
+  if (!matches.length) list.innerHTML = '<div style="padding:8px 12px;font-size:0.82rem;color:var(--muted);">Sin resultados</div>';
+}
+
+function selectSqMachine(id, name) {
+  _sqMachineId = id;
+  document.getElementById('sq-machine-search').value = '';
+  document.getElementById('sq-machine-list').innerHTML = '';
+  const sel = document.getElementById('sq-machine-selected');
+  sel.textContent = '✓ ' + name;
+  sel.style.display = 'block';
+}
 
 async function openSubmitQuestion() {
   document.getElementById('sq-author').value = playerName || localStorage.getItem('mda_user_name') || '';
   document.getElementById('sq-anon').checked = false;
   document.getElementById('sq-type').value = 'falla';
+  document.getElementById('sq-machine-na').checked = false;
+  document.getElementById('sq-machine-wrap').style.display = '';
+  document.getElementById('sq-machine-search').value = '';
+  document.getElementById('sq-machine-list').innerHTML = '';
+  document.getElementById('sq-machine-selected').style.display = 'none';
+  _sqMachineId = null;
+  filterSqMachines();
   document.getElementById('sq-question').value = '';
   document.getElementById('sq-correct').value = '';
   document.getElementById('sq-optb').value = '';
@@ -52,7 +87,7 @@ async function submitQuestion() {
     const filename = 'quiz_q_' + Date.now() + '_' + Math.random().toString(36).slice(2) + '.jpg';
     const url = await uploadPhoto(_qSubmitFile, filename);
     statusEl.textContent = 'Guardando pregunta...';
-    await sbPost('/rest/v1/quiz_questions', {
+    const payload = {
       type,
       image_url: url,
       question_text: question,
@@ -63,7 +98,9 @@ async function submitQuestion() {
       submitted_by_display: anon ? 'Anónimo' : author,
       submitted_by_real: author,
       status: 'pending'
-    });
+    };
+    if (_sqMachineId) payload.machine_id = _sqMachineId;
+    await sbPost('/rest/v1/quiz_questions', payload);
     statusEl.textContent = '✓ ¡Pregunta enviada! Será revisada antes de publicarse. ¡Gracias!';
     statusEl.style.color = 'var(--green)';
     setTimeout(() => closeModal('modal-submit-q'), 2500);

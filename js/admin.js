@@ -964,6 +964,35 @@ async function rejectQuestion(id) {
   }
 }
 
+let _eqMachineId = null;
+
+function toggleEqMachine() {
+  const na = document.getElementById('eq-machine-na').checked;
+  document.getElementById('eq-machine-wrap').style.display = na ? 'none' : '';
+  if (na) _eqMachineId = null;
+}
+
+function filterEqMachines() {
+  const q = document.getElementById('eq-machine-search').value.toLowerCase();
+  const list = document.getElementById('eq-machine-list');
+  const matches = MACHINES.filter(m => !q || m.name.toLowerCase().includes(q)).slice(0, 10);
+  list.innerHTML = matches.map(m =>
+    '<div onclick="selectEqMachine(' + m.id + ',\'' + m.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'") + '\')" ' +
+    'style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:0.82rem;">' +
+    m.name.replace(/</g,'&lt;') + '</div>'
+  ).join('');
+  if (!matches.length) list.innerHTML = '<div style="padding:8px 12px;font-size:0.82rem;color:var(--muted);">Sin resultados</div>';
+}
+
+function selectEqMachine(id, name) {
+  _eqMachineId = id;
+  document.getElementById('eq-machine-search').value = '';
+  document.getElementById('eq-machine-list').innerHTML = '';
+  const sel = document.getElementById('eq-machine-selected');
+  sel.textContent = '✓ ' + name;
+  sel.style.display = 'block';
+}
+
 function openEditQuestion(id) {
   const all = [...pendingQuestions, ...approvedQuestions];
   const q = all.find(x => x.id === id) || { id };
@@ -976,6 +1005,24 @@ function openEditQuestion(id) {
   setVal('eq-optb', q.option_b);
   setVal('eq-optc', q.option_c);
   setVal('eq-optd', q.option_d);
+  _eqMachineId = q.machine_id || null;
+  const eqNa = document.getElementById('eq-machine-na');
+  const eqWrap = document.getElementById('eq-machine-wrap');
+  const eqSel = document.getElementById('eq-machine-selected');
+  const eqSearch = document.getElementById('eq-machine-search');
+  const eqList = document.getElementById('eq-machine-list');
+  if (q.machine_id) {
+    const m = MACHINES.find(x => x.id === q.machine_id);
+    if (eqNa) eqNa.checked = false;
+    if (eqWrap) eqWrap.style.display = '';
+    if (eqSearch) eqSearch.value = '';
+    if (eqList) eqList.innerHTML = '';
+    if (eqSel) { eqSel.textContent = '✓ ' + (m ? m.name : 'ID: ' + q.machine_id); eqSel.style.display = 'block'; }
+  } else {
+    if (eqNa) eqNa.checked = true;
+    if (eqWrap) eqWrap.style.display = 'none';
+    if (eqSel) eqSel.style.display = 'none';
+  }
   const wrap = document.getElementById('eq-img-wrap');
   if (wrap) wrap.innerHTML = q.image_url
     ? '<img src="' + getImgUrl(q.image_url) + '" style="max-height:300px;max-width:100%;object-fit:contain;border-radius:8px;">'
@@ -1002,7 +1049,8 @@ async function saveEditedQuestion() {
   statusEl.style.color = 'var(--accent2)';
   statusEl.textContent = 'Guardando...';
   try {
-    const r = await sbPatch('/rest/v1/quiz_questions?id=eq.' + _editingQuestionId, { type, question_text, correct_answer, option_b, option_c, option_d });
+    const patch = { type, question_text, correct_answer, option_b, option_c, option_d, machine_id: _eqMachineId || null };
+    const r = await sbPatch('/rest/v1/quiz_questions?id=eq.' + _editingQuestionId, patch);
     if (!r.ok) { const e = await r.text(); throw new Error(e); }
     statusEl.textContent = '✓ Guardado.';
     statusEl.style.color = 'var(--green)';

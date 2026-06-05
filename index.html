@@ -229,7 +229,7 @@
 <!-- MODALES Y OVERLAYS -->
 <div id="countdown-overlay" style="display:none;position:fixed;inset:0;z-index:998;background:rgba(10,10,18,0.97);flex-direction:column;align-items:center;justify-content:center;"><div id="cd-status">Cargando...</div><div id="cd-num" style="font-size:6rem;color:#06b6d4;"></div><div style="width:220px;height:6px;background:#2d2d4e;"><div id="cd-bar" style="width:0%;height:100%;background:linear-gradient(90deg,#7c3aed,#06b6d4);"></div></div></div>
 
-<div id="lightbox" onclick="closeLb()"><div class="lb-box" onclick="event.stopPropagation()"><div class="lb-name" id="lb-name"></div><div id="lb-photo-meta" class="lb-photo-meta" style="display:none"></div><div class="lb-img"><button class="lb-arr lb-arr-l" id="lb-arr-l" onclick="galleryNav(-1)">‹</button><img id="lb-img" src=""><button class="lb-arr lb-arr-r" id="lb-arr-r" onclick="galleryNav(1)">›</button></div><div class="lb-photo-thumbs" id="lb-thumbs"></div><div class="lb-info-section" id="lb-notes-list"></div><div class="lb-mini-form" id="lb-form-note"><textarea id="lb-note-input" rows="3" placeholder="Ej: dato curioso..."></textarea><div style="display:flex;gap:8px;"><button class="lb-mini-btn" onclick="toggleLbForm('note')">Cancelar</button><button class="lb-mini-btn lb-mini-btn-ok" onclick="lbSubmitNote()">Publicar</button></div></div><div class="lb-mini-form" id="lb-form-photo"><div style="font-size:0.82rem;color:var(--muted);">Subir como: <strong id="lb-form-author-name2"></strong></div><div style="display:flex;gap:8px;"><label class="upload-label">📁 Galería<input type="file" accept="image/*" multiple id="lb-gallery-file" onchange="lbUploadPhotos(this)" style="display:none"></label><label class="upload-label">📷 Cámara<input type="file" accept="image/*" capture="environment" id="lb-camera-file" onchange="lbUploadPhotos(this)" style="display:none"></label></div><div id="lb-upload-status" style="display:none;font-size:0.78rem;padding:4px 0;color:var(--accent2);"></div><div><button class="lb-mini-btn" onclick="toggleLbForm('photo')">Cancelar</button></div></div><div class="lb-actions"><button class="lb-close" onclick="toggleLbForm('note')">Agregar dato</button><button class="lb-close" onclick="toggleLbForm('photo')">Agregar foto</button><button class="lb-close" onclick="closeLb()">Cerrar</button></div></div></div>
+<div id="lightbox" onclick="closeLb()"><div class="lb-box" onclick="event.stopPropagation()"><div class="lb-name" id="lb-name"></div><div id="lb-photo-meta" class="lb-photo-meta" style="display:none"></div><div class="lb-img"><button class="lb-arr lb-arr-l" id="lb-arr-l" onclick="galleryNav(-1)">‹</button><img id="lb-img" src=""><button class="lb-arr lb-arr-r" id="lb-arr-r" onclick="galleryNav(1)">›</button></div><div class="lb-photo-thumbs" id="lb-thumbs"></div><div class="lb-info-section" id="lb-notes-list"></div><div class="lb-info-section" id="lb-questions-list" style="display:none;"></div><div class="lb-mini-form" id="lb-form-note"><textarea id="lb-note-input" rows="3" placeholder="Ej: dato curioso..."></textarea><div style="display:flex;gap:8px;"><button class="lb-mini-btn" onclick="toggleLbForm('note')">Cancelar</button><button class="lb-mini-btn lb-mini-btn-ok" onclick="lbSubmitNote()">Publicar</button></div></div><div class="lb-mini-form" id="lb-form-photo"><div style="font-size:0.82rem;color:var(--muted);">Subir como: <strong id="lb-form-author-name2"></strong></div><div style="display:flex;gap:8px;"><label class="upload-label">📁 Galería<input type="file" accept="image/*" multiple id="lb-gallery-file" onchange="lbUploadPhotos(this)" style="display:none"></label><label class="upload-label">📷 Cámara<input type="file" accept="image/*" capture="environment" id="lb-camera-file" onchange="lbUploadPhotos(this)" style="display:none"></label></div><div id="lb-upload-status" style="display:none;font-size:0.78rem;padding:4px 0;color:var(--accent2);"></div><div><button class="lb-mini-btn" onclick="toggleLbForm('photo')">Cancelar</button></div></div><div class="lb-actions"><button class="lb-close" onclick="toggleLbForm('note')">Agregar dato</button><button class="lb-close" onclick="toggleLbForm('photo')">Agregar foto</button><button class="lb-close" onclick="closeLb()">Cerrar</button></div></div></div>
 
 <div id="modal-model" class="modal"><div class="modal-box"><div class="modal-title" id="modal-title">Agregar modelo</div><div><label>Nombre</label><input class="modal-input" id="modal-name"></div><div><label>Foto principal</label><div class="img-preview" id="modal-preview"></div><label class="upload-label">📷 Seleccionar imagen<input type="file" accept="image/*" id="modal-file" onchange="previewFile(this)" style="display:none"></label></div><div class="modal-btns"><button id="modal-save-btn" class="btn btn-primary" onclick="saveModel()">Guardar</button><button class="btn btn-secondary" onclick="closeModal('modal-model')">Cancelar</button></div><div id="modal-progress" style="display:none;font-size:0.78rem;color:var(--accent2);margin-top:8px;"></div></div></div>
 
@@ -253,6 +253,17 @@
         <option value="curiosidad">Curiosidad</option>
         <option value="repuesto">Repuesto</option>
       </select>
+    </div>
+    <div style="margin-bottom:10px;">
+      <label class="form-label">Modelo de máquina</label>
+      <div style="display:flex;align-items:center;gap:10px;margin:4px 0 6px;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:var(--muted);"><input type="checkbox" id="sq-machine-na" onchange="toggleSqMachine()"> No aplica</label>
+      </div>
+      <div id="sq-machine-wrap">
+        <input class="modal-input" id="sq-machine-search" oninput="filterSqMachines()" placeholder="Buscar modelo..." autocomplete="off">
+        <div id="sq-machine-list" style="max-height:140px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-top:4px;"></div>
+        <div id="sq-machine-selected" style="display:none;font-size:0.82rem;color:var(--accent2);padding:4px 0;"></div>
+      </div>
     </div>
     <div style="margin-bottom:10px;">
       <label class="form-label">Foto</label>
@@ -282,6 +293,17 @@
         <option value="curiosidad">Curiosidad</option>
         <option value="repuesto">Repuesto</option>
       </select>
+    </div>
+    <div style="margin-bottom:8px;">
+      <label class="form-label">Modelo de máquina</label>
+      <div style="display:flex;align-items:center;gap:10px;margin:4px 0 6px;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:var(--muted);"><input type="checkbox" id="eq-machine-na" onchange="toggleEqMachine()"> No aplica</label>
+      </div>
+      <div id="eq-machine-wrap">
+        <input class="modal-input" id="eq-machine-search" oninput="filterEqMachines()" placeholder="Buscar modelo..." autocomplete="off">
+        <div id="eq-machine-list" style="max-height:140px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-top:4px;"></div>
+        <div id="eq-machine-selected" style="display:none;font-size:0.82rem;color:var(--accent2);padding:4px 0;"></div>
+      </div>
     </div>
     <div style="margin-bottom:8px;"><label class="form-label">Pregunta</label><input class="modal-input" id="eq-question" maxlength="200"></div>
     <div style="margin-bottom:6px;"><label class="form-label">✅ Respuesta correcta</label><input class="modal-input" id="eq-correct" maxlength="120"></div>

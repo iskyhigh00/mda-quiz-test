@@ -147,6 +147,7 @@ function openGallery(m) {
   renderGalleryPhoto();
   renderLbThumbs();
   loadLbNotes(m.id);
+  loadLbMachineQuestions(m.id);
   history.pushState({ lightbox: true }, '');
   _lbHistoryPushed = true;
   document.getElementById('lightbox').classList.add('open');
@@ -319,6 +320,26 @@ function toggleLbForm(type) {
   } else {
     photoForm.classList.toggle('open');
     noteForm.classList.remove('open');
+  }
+}
+
+async function loadLbMachineQuestions(machineId) {
+  const wrap = document.getElementById('lb-questions-list');
+  if (!wrap) return;
+  wrap.style.display = 'none';
+  try {
+    const qs = await sbGet('/rest/v1/quiz_questions?machine_id=eq.' + machineId + '&status=eq.approved&order=created_at.desc&limit=50');
+    if (!qs.length) return;
+    wrap.style.display = '';
+    wrap.innerHTML = '<div class="lb-head" style="font-size:0.85rem;padding:8px 0 4px;">❓ Preguntas de quiz (' + qs.length + ')</div>' +
+      qs.map(q =>
+        '<div class="lb-note-card">' +
+        '<div class="lb-note-card-text" style="font-size:0.82rem;font-weight:600;">' + q.question_text.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>' +
+        '<div class="lb-note-card-meta" style="color:var(--green);">✅ ' + q.correct_answer.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>' +
+        '</div>'
+      ).join('');
+  } catch(e) {
+    wrap.style.display = 'none';
   }
 }
 

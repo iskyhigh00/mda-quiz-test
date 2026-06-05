@@ -25,12 +25,12 @@ function closeModal(id) {
   }
 }
 
-function goTo(v) {
+function goTo(v, _historyOp = 'push') {
   if (v === 'setup') {
     const saved = localStorage.getItem('mda_user_name') || '';
     if (saved && !playerName) playerName = saved;
   }
-  
+
   const currentView = document.querySelector('.view.active')?.id;
   if (currentView === 'view-quiz' && v !== 'quiz' && v !== 'results') {
     clearTimers();
@@ -47,7 +47,7 @@ function goTo(v) {
 
   document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
   document.getElementById('view-' + v).classList.add('active');
-  
+
   document.querySelectorAll('.nav-tab').forEach((t, i) => {
     t.classList.toggle('active',
       (v === 'catalog' && i === 0) ||
@@ -56,7 +56,7 @@ function goTo(v) {
       (v === 'admin' && i === 3)
     );
   });
-  
+
   if (v === 'catalog') {
     if (typeof startCatalogSlideshow === 'function') startCatalogSlideshow();
   }
@@ -72,6 +72,9 @@ function goTo(v) {
     if (w) w.style.display = pw < 4 ? 'block' : 'none';
     if (typeof loadApprovedQCounts === 'function') loadApprovedQCounts();
   }
+
+  if (_historyOp === 'push') history.pushState({ view: v }, '');
+  else if (_historyOp === 'replace') history.replaceState({ view: v }, '');
 }
 
 function initApp() {
@@ -86,7 +89,7 @@ function initApp() {
     if (welcome) welcome.classList.remove('active');
     if (catalog) catalog.classList.add('active');
     _updateUserBar();
-    goTo('catalog');
+    goTo('catalog', 'replace');
   } else {
     if (nav) nav.style.display = 'none';
     if (welcome) welcome.classList.add('active');
@@ -113,7 +116,7 @@ function confirmWelcome() {
   if (welcome) welcome.classList.remove('active');
 
   _updateUserBar();
-  goTo('catalog');
+  goTo('catalog', 'replace');
   requestNotifPermission();
 }
 
@@ -257,7 +260,7 @@ document.addEventListener('keydown', e => {
 });
 
 // Botón retroceder del navegador — cerrar modales y diálogos sin navegar
-window.addEventListener('popstate', () => {
+window.addEventListener('popstate', e => {
   if (_skipNextPopstate) { _skipNextPopstate = false; return; }
   if (_dlgHistoryPushed && _dlgResolve) {
     _dlgHistoryPushed = false;
@@ -273,5 +276,12 @@ window.addEventListener('popstate', () => {
     const id = _modalHistoryId;
     _modalHistoryId = null;
     document.getElementById(id)?.classList.remove('open');
+    return;
+  }
+  // Navigate views if lightbox is not open (catalog.js handles lightbox)
+  if (document.getElementById('lightbox')?.classList.contains('open')) return;
+  const NAVIGABLE = ['catalog', 'setup', 'quiz', 'results', 'ranking', 'admin'];
+  if (e.state && e.state.view && NAVIGABLE.includes(e.state.view)) {
+    goTo(e.state.view, 'none');
   }
 });

@@ -1468,6 +1468,9 @@ tbody td {
   table {
     min-width: 460px;
   }
+  #lb-body table {
+    min-width: 0;
+  }
   .lb-box {
     width: 96%;
     max-height: 96vh;
