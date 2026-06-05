@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Migración de fotos — MDAs Casino</title>
+<style>
+  body { font-family: monospace; background: #0a0a12; color: #e8e4f0; padding: 24px; max-width: 700px; margin: 0 auto; }
+  h2 { color: #06b6d4; }
+  button { background: #7c3aed; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 1rem; cursor: pointer; margin: 8px 0; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  #log { background: #12121e; border: 1px solid #2d2d4e; border-radius: 8px; padding: 16px; margin-top: 16px; min-height: 200px; max-height: 500px; overflow-y: auto; font-size: 0.82rem; white-space: pre-wrap; }
+  .ok  { color: #10b981; }
+  .err { color: #ef4444; }
+  .inf { color: #06b6d4; }
+  .warn { color: #f59e0b; }
+</style>
+</head>
+<body>
+<h2>🔄 Migración de fotos — MDAs Casino</h2>
+<p style="color:#64748b;font-size:0.85rem;">Transfiere todas las fotos del proyecto viejo al nuevo. Abre esta página y presiona Iniciar.</p>
+
+<button id="btn" onclick="run()">▶ Iniciar migración</button>
+<button onclick="document.getElementById('log').textContent=''" style="background:#2d2d4e;">Limpiar log</button>
+
+<div id="log">Esperando...</div>
+
+<script>
+const OLD = {
+  url: 'https://etapmrnynqtqqjleujok.supabase.co',
+  key: 'sb_publishable_1GjAGxMyz7BTBa4NLVzAEw_-GPKqFCN',
+  bucket: 'mda-photos'
+};
+const NEW = {
+  url: 'https://xomyutrarimpefhwxnij.supabase.co',
+  key: 'sb_publishable_GMFe8QUEC5OPKFLwKxXOBA_Yl1dBykn',
+  bucket: 'mda-photos'
+};
+
+const logEl = document.getElementById('log');
+logEl.textContent = '';
+
+function log(msg, cls) {
+  const line = document.createElement('div');
+  if (cls) line.className = cls;
+  line.textContent = msg;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+async function listAllFiles(prefix = '') {
+  const all = [];
+  let offset = 0;
+  while (true) {
+    const r = await fetch(`${OLD.url}/storage/v1/object/list/${OLD.bucket}`, {
+      method: 'POST',
+      headers: { 'apikey': OLD.key, 'Authorization': 'Bearer ' + OLD.key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prefix, limit: 1000, offset, sortBy: { column: 'name', order: 'asc' } })
+    });
+    const data = await r.json();
+    if (!Array.isArray(data) || data.length === 0) break;
+    // Si hay subcarpetas (metadata null = carpeta), las recursamos
+    for (const item of data) {
+      if (!item.metadata) {
+        // es carpeta
+        const sub = await listAllFiles(prefix ? prefix + '/' + item.name : item.name);
+        all.push(...sub);
+      } else {
+        all.push(prefix ? prefix + '/' + item.name : item.name);
+      }
+    }
+    if (data.length < 1000) break;
+    offset += 1000;
+  }
+  return all;
+}
+
+async function run() {
+  document.getElementById('btn').disabled = true;
+  logEl.textContent = '';
+
+  try {
+    log('📋 Listando archivos en bucket antiguo...', 'inf');
+    const files = await listAllFiles();
+    log(`   ${files.length} archivos encontrados`, 'inf');
+
+    if (files.length === 0) {
+      log('⚠️  No hay archivos en el bucket antiguo.', 'warn');
+      document.getElementById('btn').disabled = false;
+      return;
+    }
+
+    let ok = 0, fail = 0;
+
+    for (let i = 0; i < files.length; i++) {
+      const filename = files[i];
+      log(`[${i+1}/${files.length}] Procesando: ${filename}`);
+
+      // Descargar del bucket viejo
+      let blob;
+      try {
+        const dlUrl = `${OLD.url}/storage/v1/object/public/${OLD.bucket}/${filename}`;
+        const dlRes = await fetch(dlUrl);
+        if (!dlRes.ok) throw new Error('HTTP ' + dlRes.status);
+        blob = await dlRes.blob();
+      } catch(e) {
+        log(`  ❌ Error descargando: ${e.message}`, 'err');
+        fail++;
+        continue;
+      }
+
+      // Subir al bucket nuevo
+      try {
+        const upRes = await fetch(`${NEW.url}/storage/v1/object/${NEW.bucket}/${filename}`, {
+          method: 'POST',
+          headers: {
+            'apikey': NEW.key,
+            'Authorization': 'Bearer ' + NEW.key,
+            'Content-Type': blob.type || 'image/jpeg',
+            'x-upsert': 'true'
+          },
+          body: blob
+        });
+        if (!upRes.ok) {
+          const txt = await upRes.text();
+          throw new Error('HTTP ' + upRes.status + ': ' + txt);
+        }
+        log(`  ✅ OK`, 'ok');
+        ok++;
+      } catch(e) {
+        log(`  ❌ Error subiendo: ${e.message}`, 'err');
+        fail++;
+      }
+    }
+
+    log('', '');
+    log(`🎉 Migración completada: ${ok} OK, ${fail} errores`, ok > 0 && fail === 0 ? 'ok' : 'warn');
+
+    if (ok > 0) {
+      log('', '');
+      log('Ahora ve a la app y recarga — las fotos deberían aparecer.', 'inf');
+    }
+
+  } catch(e) {
+    log('❌ Error fatal: ' + e.message, 'err');
+  }
+
+  document.getElementById('btn').disabled = false;
+}
+</script>
+</body>
+</html>
