@@ -5,8 +5,8 @@
 const APP_VERSION = '1.3.0';
 
 // Supabase
-const SB = 'https://etapmrnynqtqqjleujok.supabase.co';
-const KEY = 'sb_publishable_1GjAGxMyz7BTBa4NLVzAEw_-GPKqFCN';
+const SB = 'https://xomyutrarimpefhwxnij.supabase.co';
+const KEY = 'sb_publishable_GMFe8QUEC5OPKFLwKxXOBA_Yl1dBykn';
 const BUCKET = 'mda-photos';
 const STORAGE_URL = SB + '/storage/v1/object/' + BUCKET + '/';
 const STORAGE_PUBLIC = SB + '/storage/v1/object/public/' + BUCKET + '/';
