@@ -89,10 +89,11 @@ function pickDiffChip(diff, el) {
 
 function updateSetupChips() {
   const d = DIFFICULTIES[cfg.diff] || DIFFICULTIES.normal;
+  const displayMult = d.displayMult !== undefined ? d.displayMult : d.finalMult;
   [5, 10, 20].forEach(q => {
     const el = document.getElementById('chip-pts-' + q);
     const base = maxPtsConfig[q] || (q === 5 ? 1000 : q === 10 ? 1200 : 1300);
-    if (el) el.textContent = '≤ ' + Math.round(base * d.finalMult) + ' pts';
+    if (el) el.textContent = '≤ ' + Math.round(base * displayMult) + ' pts';
   });
 }
 
