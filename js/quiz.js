@@ -126,10 +126,17 @@ function clearTimers() {
   clearTimeout(autoTO);
 }
 
+function displayPts(raw) {
+  if (!qTotal) return raw;
+  const targetMax = qTotal <= 5 ? (maxPtsConfig[5] || 1000) : qTotal <= 10 ? (maxPtsConfig[10] || 1200) : (maxPtsConfig[20] || 1300);
+  const d = DIFFICULTIES[cfg.diff] || DIFFICULTIES.normal;
+  return Math.round(raw * targetMax / (qTotal * 100) * d.finalMult);
+}
+
 function updateQStats() {
   document.getElementById('q-ok').textContent = qCorrect;
   document.getElementById('q-err').textContent = qWrong;
-  document.getElementById('q-pts').textContent = qScore;
+  document.getElementById('q-pts').textContent = displayPts(qScore);
 }
 
 function showFb(ok, correctName, pts) {
@@ -138,7 +145,7 @@ function showFb(ok, correctName, pts) {
   if (ok) {
     msg.className = 'fb-msg fb-ok';
     msg.textContent = ['¡Correcto!', '¡Exacto!', '¡Muy bien!', '¡Perfecto!'][Math.floor(Math.random() * 4)];
-    pEl.textContent = '+' + pts + ' pts';
+    pEl.textContent = '+' + displayPts(pts) + ' pts';
     pEl.style.display = '';
   } else {
     msg.className = 'fb-msg fb-fail';
@@ -173,7 +180,7 @@ function startTimer() {
     const fr = el / (cfg.t * 1000);
     fg.style.strokeDashoffset = Math.min(CIRC * fr, CIRC);
     num.textContent = Math.ceil(Math.max(0, cfg.t - el / 1000));
-    prev.textContent = '+' + calcPts(el);
+    prev.textContent = '+' + displayPts(calcPts(el));
     if (fr > 0.6) {
       fg.style.stroke = 'var(--red)';
       num.style.color = 'var(--red)';
