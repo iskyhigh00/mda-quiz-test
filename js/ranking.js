@@ -260,12 +260,12 @@ async function startCompetition() {
   const minutes = parseInt(document.getElementById('comp-minutes')?.value || 0);
   const durationMs = (days * 24 * 60 * 60 * 1000) + (hours * 60 * 60 * 1000) + (minutes * 60 * 1000);
   if (durationMs <= 0) {
-    alert('Por favor especifica una duracion valida.');
+    await mdaAlert('Por favor especifica una duración válida.');
     return;
   }
   const prize = document.getElementById('prize-input')?.value.trim() || '';
   const end = new Date(Date.now() + durationMs);
-  if (!confirm('Iniciar competencia hasta ' + end.toLocaleString('es-CL') + '?')) return;
+  if (!await mdaConfirm('Iniciar competencia hasta ' + end.toLocaleString('es-CL') + '?', false)) return;
   const now = new Date();
   const compId = 'comp_' + now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0') + '_' + String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0') + String(now.getSeconds()).padStart(2, '0');
   try {
@@ -279,9 +279,9 @@ async function startCompetition() {
     updateCompetitionUI();
     startCompetitionCountdown();
     loadRanking();
-    alert('Competencia iniciada.');
+    await mdaAlert('Competencia iniciada.');
   } catch (e) {
-    alert('Error: ' + e.message);
+    await mdaAlert('Error: ' + e.message);
   }
 }
 
@@ -291,16 +291,22 @@ async function updateCompetitionPrize() {
     await sbFetch('/rest/v1/settings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify({ key: 'prize', value: prize }) });
     compState.prize = prize;
     renderCompetitionBanner();
-    alert('Premio actualizado.');
+    await mdaAlert('Premio actualizado.');
   } catch (e) {
-    alert('Error: ' + e.message);
+    await mdaAlert('Error: ' + e.message);
   }
 }
 
 async function addCompetitionTime() {
-  const days = parseInt(prompt('Días a agregar:', '0')) || 0;
-  const hours = parseInt(prompt('Horas a agregar:', '0')) || 0;
-  const minutes = parseInt(prompt('Minutos a agregar:', '0')) || 0;
+  const daysStr = await mdaPrompt('Días a agregar:', '0');
+  if (daysStr === null) return;
+  const days = parseInt(daysStr) || 0;
+  const hoursStr = await mdaPrompt('Horas a agregar:', '0');
+  if (hoursStr === null) return;
+  const hours = parseInt(hoursStr) || 0;
+  const minutesStr = await mdaPrompt('Minutos a agregar:', '0');
+  if (minutesStr === null) return;
+  const minutes = parseInt(minutesStr) || 0;
   if (days === 0 && hours === 0 && minutes === 0) return;
   const extraMs = (days * 24 * 60 * 60 * 1000) + (hours * 60 * 60 * 1000) + (minutes * 60 * 1000);
   const newEnd = new Date(compState.endTime.getTime() + extraMs);
@@ -309,14 +315,14 @@ async function addCompetitionTime() {
     compState.endTime = newEnd;
     updateCompetitionUI();
     startCompetitionCountdown();
-    alert('Tiempo agregado. Nuevo fin: ' + newEnd.toLocaleString('es-CL'));
+    await mdaAlert('Tiempo agregado. Nuevo fin: ' + newEnd.toLocaleString('es-CL'));
   } catch (e) {
-    alert('Error: ' + e.message);
+    await mdaAlert('Error: ' + e.message);
   }
 }
 
 async function stopCompetition() {
-  if (!confirm('Detener la competencia AHORA? Se guardara el ganador y la app volvera a modo practica.')) return;
+  if (!await mdaConfirm('¿Detener la competencia AHORA?\nSe guardará el ganador y la app volverá a modo práctica.')) return;
   await finishCompetition();
 }
 
@@ -342,7 +348,7 @@ async function finishCompetition() {
         if (!r.ok) {
           const e = await r.text();
           console.error('history save failed:', e);
-          alert('ERROR guardando historial. Competencia NO finalizada.');
+          await mdaAlert('ERROR guardando historial. Competencia NO finalizada.');
           return;
         }
       }
@@ -363,7 +369,7 @@ async function finishCompetition() {
     }
   } catch (e) {
     console.error('finishCompetition:', e);
-    alert('Error: ' + e.message);
+    await mdaAlert('Error: ' + e.message);
   }
 }
 

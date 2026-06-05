@@ -53,7 +53,7 @@ async function adminLogin() {
     loadQuizTypeConfig();
     return;
   }
-  const input = prompt('Clave:');
+  const input = await mdaPrompt('Clave:');
   if (!input) return;
   if (input.trim() === getClaveHora()) {
     adminUnlocked = true;
@@ -64,7 +64,7 @@ async function adminLogin() {
     loadCompetition();
     loadQuizTypeConfig();
   } else {
-    alert('Clave incorrecta.');
+    await mdaAlert('Clave incorrecta.');
   }
 }
 
@@ -134,7 +134,7 @@ function previewFile(input) {
 async function saveModel() {
   const name = document.getElementById('modal-name').value.trim();
   if (!name) {
-    alert('Nombre obligatorio.');
+    await mdaAlert('Nombre obligatorio.');
     return;
   }
   const prog = document.getElementById('modal-progress');
@@ -142,7 +142,7 @@ async function saveModel() {
   saveBtn.disabled = true;
   if (editingId === null) {
     if (!modalNewFile) {
-      alert('Agrega una foto.');
+      await mdaAlert('Agrega una foto.');
       saveBtn.disabled = false;
       return;
     }
@@ -151,7 +151,7 @@ async function saveModel() {
     const res = await sbPost('/rest/v1/machines', { name, sort_order: MACHINES.length + 1, photo_url: '', photo_urls: '[]' });
     if (!res.ok) {
       const e = await res.text();
-      alert('Error: ' + e);
+      await mdaAlert('Error: ' + e);
       saveBtn.disabled = false;
       prog.style.display = 'none';
       return;
@@ -159,7 +159,7 @@ async function saveModel() {
     const rows = await sbGet('/rest/v1/machines?name=eq.' + encodeURIComponent(name) + '&order=id.desc&limit=1');
     const newId = rows[0]?.id;
     if (!newId) {
-      alert('Error al obtener ID.');
+      await mdaAlert('Error al obtener ID.');
       saveBtn.disabled = false;
       prog.style.display = 'none';
       return;
@@ -171,7 +171,7 @@ async function saveModel() {
       await sbPatch('/rest/v1/machines?id=eq.' + newId, { photo_url: url });
       MACHINES.push({ id: newId, name, sort_order: MACHINES.length, photo_url: url, photo_urls: [] });
     } catch (e) {
-      alert('Nombre guardado pero error en foto: ' + e.message);
+      await mdaAlert('Nombre guardado pero error en foto: ' + e.message);
     }
   } else {
     const m = MACHINES.find(x => x.id === editingId);
@@ -190,7 +190,7 @@ async function saveModel() {
         updateData.photo_url = url;
         m.photo_url = url;
       } catch (e) {
-        alert('Error en foto: ' + e.message);
+        await mdaAlert('Error en foto: ' + e.message);
       }
     }
     await sbPatch('/rest/v1/machines?id=eq.' + editingId, updateData);
@@ -204,11 +204,11 @@ async function saveModel() {
 
 async function deleteModel(id) {
   const m = MACHINES.find(x => x.id === id);
-  if (!confirm('Eliminar "' + m?.name + '"?')) return;
+  if (!await mdaConfirm('Eliminar "' + m?.name + '"?')) return;
   const res = await sbDelete('/rest/v1/machines?id=eq.' + id);
   if (!res.ok) {
     const e = await res.text();
-    alert('Error: ' + e);
+    await mdaAlert('Error: ' + e);
     return;
   }
   MACHINES = MACHINES.filter(x => x.id !== id);
@@ -240,7 +240,7 @@ function renderPhotosGrid() {
     md.onclick = async () => {
       const extras = (m.photo_urls || []).filter(p => photoUrl(p) !== m.photo_url);
       if (!extras.length) {
-        alert('No puedes eliminar la unica foto.');
+        await mdaAlert('No puedes eliminar la única foto.');
         return;
       }
       const newMain = extras[0];
@@ -311,7 +311,7 @@ async function addPhotos(input) {
         await sbPatch('/rest/v1/machines?id=eq.' + m.id, { photo_urls: JSON.stringify(m.photo_urls) });
       }
     } catch (e) {
-      alert('Error foto ' + (i + 1) + ': ' + e.message);
+      await mdaAlert('Error foto ' + (i + 1) + ': ' + e.message);
     }
   }
   prog.style.display = 'none';
@@ -417,9 +417,9 @@ async function saveMaxPts() {
     ));
     maxPtsConfig = vals;
     if (typeof updateSetupChips === 'function') updateSetupChips();
-    alert('Guardado.');
+    await mdaAlert('Guardado.');
   } catch (e) {
-    alert('Error: ' + e.message);
+    await mdaAlert('Error: ' + e.message);
   }
 }
 
@@ -455,7 +455,7 @@ function publicPickPhotos(input) {
     return;
   }
   preview.innerHTML = '<div style="display:flex;gap:8px;flex-wrap:wrap;">' + files.map((f, i) => '<div style="background:var(--surface);padding:8px;border-radius:8px;font-size:0.72rem;">Foto ' + (i + 1) + '</div>').join('') + '</div>';
-  if (input.files.length > 3) alert('Solo se cargarán las primeras 3 fotos.');
+  if (input.files.length > 3) mdaAlert('Solo se cargarán las primeras 3 fotos.');
 }
 
 function renderPublicMachineList() {
@@ -485,16 +485,16 @@ function renderPublicMachineList() {
 async function savePublicUpload() {
   const by = document.getElementById('public-uploader')?.value.trim();
   if (!by) {
-    alert('Escribe quien sube la foto.');
+    await mdaAlert('Escribe quien sube la foto.');
     return;
   }
   if (!publicUploadFiles.length) {
-    alert('Selecciona al menos una foto.');
+    await mdaAlert('Selecciona al menos una foto.');
     return;
   }
   const m = MACHINES.find(x => x.id === publicUploadMachineId);
   if (!m) {
-    alert('Selecciona la maquina correspondiente.');
+    await mdaAlert('Selecciona la máquina correspondiente.');
     return;
   }
   if (!m.photo_urls) m.photo_urls = [];
@@ -519,7 +519,7 @@ async function savePublicUpload() {
     await loadMachines();
     setTimeout(() => closeModal('modal-public-upload'), 700);
   } catch (e) {
-    alert('Error al subir: ' + e.message);
+    await mdaAlert('Error al subir: ' + e.message);
   } finally {
     setTimeout(() => { prog.style.display = 'none'; }, 900);
   }
@@ -596,18 +596,18 @@ async function loadWinnersMgmt() {
 
 async function deleteWinner(id) {
   const w = allWinnersMgmt.find(x => x.id === id);
-  if (!confirm('Eliminar del historial: ' + w?.player_name + ' (' + w?.reset_date + ')?')) return;
+  if (!await mdaConfirm('Eliminar del historial: ' + w?.player_name + ' (' + w?.reset_date + ')?')) return;
   try {
     const r = await sbDelete('/rest/v1/winners_history?id=eq.' + id);
     if (!r.ok && r.status !== 204) {
       const e = await r.text();
-      alert('Error: ' + e);
+      await mdaAlert('Error: ' + e);
       return;
     }
     await loadWinnersMgmt();
     loadWinnersHistory();
   } catch (e) {
-    alert('Error: ' + e.message);
+    await mdaAlert('Error: ' + e.message);
   }
 }
 
@@ -647,18 +647,18 @@ function renderNotesMgmt() {
 async function deleteNote(id) {
   const n = allNotesMgmt.find(x => x.id === id);
   const mName = MACHINES.find(m => m.id === n?.machine_id)?.name || 'desconocida';
-  if (!confirm('¿Eliminar nota de ' + n?.author + ' en ' + mName + '?')) return;
+  if (!await mdaConfirm('¿Eliminar nota de ' + n?.author + ' en ' + mName + '?')) return;
   try {
     const r = await sbDelete('/rest/v1/machine_notes?id=eq.' + id);
     if (!r.ok && r.status !== 204) {
       const e = await r.text();
-      alert('Error: ' + e);
+      await mdaAlert('Error: ' + e);
       return;
     }
     allNotesMgmt = allNotesMgmt.filter(x => x.id !== id);
     renderNotesMgmt();
   } catch (e) {
-    alert('Error: ' + e.message);
+    await mdaAlert('Error: ' + e.message);
   }
 }
 
@@ -774,45 +774,45 @@ function _refreshScoreSelectionUI() {
 
 async function deleteSelectedScores() {
   if (_selectedScoreIds.size === 0) return;
-  if (!confirm('¿Eliminar ' + _selectedScoreIds.size + ' partida(s) seleccionada(s)?')) return;
+  if (!await mdaConfirm('¿Eliminar ' + _selectedScoreIds.size + ' partida(s) seleccionada(s)?')) return;
   const ids = [..._selectedScoreIds];
   try {
     const r = await sbDelete('/rest/v1/scores?id=in.(' + ids.join(',') + ')');
-    if (!r.ok && r.status !== 204) { const e = await r.text(); alert('Error: ' + e); return; }
+    if (!r.ok && r.status !== 204) { const e = await r.text(); await mdaAlert('Error: ' + e); return; }
     scoresMgmt = scoresMgmt.filter(s => !_selectedScoreIds.has(s.id));
     _selectedScoreIds.clear();
     renderScoresMgmt();
   } catch (e) {
-    alert('Error: ' + e.message);
+    await mdaAlert('Error: ' + e.message);
   }
 }
 
 async function openEditScore(id, currentPts) {
-  const newVal = prompt('Nuevo puntaje para esta partida:', currentPts);
+  const newVal = await mdaPrompt('Nuevo puntaje para esta partida:', String(currentPts));
   if (newVal === null) return;
   const pts = parseInt(newVal);
-  if (isNaN(pts) || pts < 0) { alert('Puntaje inválido.'); return; }
+  if (isNaN(pts) || pts < 0) { await mdaAlert('Puntaje inválido.'); return; }
   try {
     const r = await sbPatch('/rest/v1/scores?id=eq.' + id, { pts });
-    if (!r.ok) { const e = await r.text(); alert('Error: ' + e); return; }
+    if (!r.ok) { const e = await r.text(); await mdaAlert('Error: ' + e); return; }
     const s = scoresMgmt.find(x => x.id === id);
     if (s) s.pts = pts;
     renderScoresMgmt();
   } catch (e) {
-    alert('Error: ' + e.message);
+    await mdaAlert('Error: ' + e.message);
   }
 }
 
 async function deleteScore(id) {
   const s = scoresMgmt.find(x => x.id === id);
-  if (!confirm('¿Eliminar partida de ' + (s?.name || '?') + ' (' + s?.pts + ' pts)?')) return;
+  if (!await mdaConfirm('¿Eliminar partida de ' + (s?.name || '?') + ' (' + s?.pts + ' pts)?')) return;
   try {
     const r = await sbDelete('/rest/v1/scores?id=eq.' + id);
-    if (!r.ok && r.status !== 204) { const e = await r.text(); alert('Error: ' + e); return; }
+    if (!r.ok && r.status !== 204) { const e = await r.text(); await mdaAlert('Error: ' + e); return; }
     scoresMgmt = scoresMgmt.filter(x => x.id !== id);
     renderScoresMgmt();
   } catch (e) {
-    alert('Error: ' + e.message);
+    await mdaAlert('Error: ' + e.message);
   }
 }
 
@@ -856,16 +856,16 @@ async function saveQuizConfig() {
     mix[t] = parseInt(document.getElementById('mix-' + t)?.value) || 0;
   });
   const total = Object.values(mix).reduce((s, v) => s + v, 0);
-  if (total !== 100) { alert('Los porcentajes deben sumar 100%. Suma actual: ' + total + '%'); return; }
+  if (total !== 100) { await mdaAlert('Los porcentajes deben sumar 100%. Suma actual: ' + total + '%'); return; }
   const instr = document.getElementById('quiz-instructions')?.value.trim() || '';
   try {
     await Promise.all([
       sbFetch('/rest/v1/settings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify({ key: 'quiz_type_mix', value: JSON.stringify(mix) }) }),
       sbFetch('/rest/v1/settings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify({ key: 'question_instructions', value: instr }) })
     ]);
-    alert('Configuración guardada.');
+    await mdaAlert('Configuración guardada.');
   } catch (e) {
-    alert('Error: ' + e.message);
+    await mdaAlert('Error: ' + e.message);
   }
 }
 
@@ -945,22 +945,22 @@ function renderPendingQuestions(all) {
 async function quickApproveQuestion(id) {
   try {
     const r = await sbPatch('/rest/v1/quiz_questions?id=eq.' + id, { status: 'approved' });
-    if (!r.ok) { const e = await r.text(); alert('Error: ' + e); return; }
+    if (!r.ok) { const e = await r.text(); await mdaAlert('Error: ' + e); return; }
     await loadPendingQuestions();
   } catch (e) {
-    alert('Error: ' + e.message);
+    await mdaAlert('Error: ' + e.message);
   }
 }
 
 async function rejectQuestion(id) {
-  if (!confirm('¿Rechazar esta pregunta?')) return;
+  if (!await mdaConfirm('¿Rechazar esta pregunta?')) return;
   try {
     const r = await sbPatch('/rest/v1/quiz_questions?id=eq.' + id, { status: 'rejected' });
-    if (!r.ok) { const e = await r.text(); alert('Error: ' + e); return; }
+    if (!r.ok) { const e = await r.text(); await mdaAlert('Error: ' + e); return; }
     closeModal('modal-edit-q');
     await loadPendingQuestions();
   } catch (e) {
-    alert('Error: ' + e.message);
+    await mdaAlert('Error: ' + e.message);
   }
 }
 
@@ -994,7 +994,7 @@ async function saveEditedQuestion() {
   const option_c = document.getElementById('eq-optc')?.value.trim();
   const option_d = document.getElementById('eq-optd')?.value.trim();
   if (!question_text || !correct_answer || !option_b || !option_c || !option_d) {
-    alert('Completa todos los campos.');
+    await mdaAlert('Completa todos los campos.');
     return;
   }
   const statusEl = document.getElementById('eq-status');

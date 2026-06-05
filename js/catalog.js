@@ -350,29 +350,29 @@ async function lbSubmitNote() {
   const author = playerName || localStorage.getItem('mda_user_name') || '';
   const note = document.getElementById('lb-note-input')?.value.trim();
   if (!author) {
-    alert('Primero configura tu nombre.');
+    await mdaAlert('Primero configura tu nombre.');
     return;
   }
   if (!note) {
-    alert('Escribe algo antes de agregar.');
+    await mdaAlert('Escribe algo antes de agregar.');
     return;
   }
   if (note.length > 1000) {
-    alert('Máximo 1000 caracteres.');
+    await mdaAlert('Máximo 1000 caracteres.');
     return;
   }
   try {
     const r = await sbPost('/rest/v1/machine_notes', { machine_id: lbMachineId, author: author, note: note });
     if (!r.ok) {
       const e = await r.text();
-      alert('Error ' + r.status + ': ' + e);
+      await mdaAlert('Error ' + r.status + ': ' + e);
       return;
     }
     document.getElementById('lb-note-input').value = '';
     document.getElementById('lb-form-note').classList.remove('open');
     await loadLbNotes(lbMachineId);
   } catch (e) {
-    alert('Error: ' + e.message);
+    await mdaAlert('Error: ' + e.message);
   }
 }
 
@@ -380,7 +380,7 @@ async function lbUploadPhotos(input) {
   if (!lbMachineId || !input.files.length) return;
   const author = playerName || localStorage.getItem('mda_user_name') || '';
   if (!author) {
-    alert('Primero configura tu nombre.');
+    await mdaAlert('Primero configura tu nombre.');
     return;
   }
   const status = document.getElementById('lb-upload-status');

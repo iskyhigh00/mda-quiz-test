@@ -107,13 +107,13 @@ function _updateUserBar() {
   if (el) el.textContent = '👤 ' + (playerName || localStorage.getItem('mda_user_name') || '');
 }
 
-function changeName() {
+async function changeName() {
   const cur = localStorage.getItem('mda_user_name') || '';
-  const v = prompt('Tu nombre o apodo:', cur);
+  const v = await mdaPrompt('Tu nombre o apodo:', cur);
   if (v === null) return;
   const trimmed = v.trim();
   if (!trimmed) {
-    alert('El nombre no puede estar vacío.');
+    await mdaAlert('El nombre no puede estar vacío.');
     return;
   }
   localStorage.setItem('mda_user_name', trimmed);
@@ -159,10 +159,69 @@ function setSyncBadge(s) {
   }
 }
 
+// ===== CUSTOM DIALOGS =====
+let _dlgResolve = null;
+let _dlgType = null;
+
+function _showDialog(type, message, def, destructive) {
+  return new Promise(resolve => {
+    _dlgResolve = resolve;
+    _dlgType = type;
+    document.getElementById('dialog-message').textContent = message;
+    const inputWrap = document.getElementById('dialog-input-wrap');
+    const input = document.getElementById('dialog-input');
+    const btns = document.getElementById('dialog-btns');
+    inputWrap.style.display = type === 'prompt' ? 'block' : 'none';
+    if (type === 'prompt') { input.value = def || ''; setTimeout(() => input.focus(), 80); }
+    btns.innerHTML = '';
+    const done = val => {
+      closeModal('modal-dialog');
+      _dlgResolve = null;
+      _dlgType = null;
+      resolve(val);
+    };
+    const mkBtn = (text, cls, val) => {
+      const b = document.createElement('button');
+      b.className = 'btn ' + cls;
+      b.textContent = text;
+      b.onclick = () => done(val);
+      return b;
+    };
+    if (type === 'alert') {
+      btns.appendChild(mkBtn('Aceptar', 'btn-primary', undefined));
+    } else if (type === 'confirm') {
+      btns.appendChild(mkBtn('Cancelar', 'btn-secondary', false));
+      btns.appendChild(mkBtn('Confirmar', destructive === false ? 'btn-primary' : 'btn-danger', true));
+    } else {
+      btns.appendChild(mkBtn('Cancelar', 'btn-secondary', null));
+      const ok = document.createElement('button');
+      ok.className = 'btn btn-primary';
+      ok.textContent = 'Aceptar';
+      ok.onclick = () => done(input.value);
+      input.onkeydown = ev => { if (ev.key === 'Enter') done(input.value); };
+      btns.appendChild(ok);
+    }
+    openModal('modal-dialog');
+  });
+}
+
+function mdaAlert(msg) { return _showDialog('alert', msg); }
+function mdaConfirm(msg, destructive) { return _showDialog('confirm', msg, null, destructive); }
+function mdaPrompt(msg, def) { return _showDialog('prompt', msg, def); }
+
 // Evento Escape
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    if (typeof closeLb === 'function') closeLb();
-    document.querySelectorAll('.modal').forEach(m => m.classList.remove('open'));
+    if (_dlgResolve) {
+      const resolve = _dlgResolve;
+      const type = _dlgType;
+      closeModal('modal-dialog');
+      _dlgResolve = null;
+      _dlgType = null;
+      resolve(type === 'alert' ? undefined : type === 'confirm' ? false : null);
+    } else {
+      if (typeof closeLb === 'function') closeLb();
+      document.querySelectorAll('.modal').forEach(m => m.classList.remove('open'));
+    }
   }
 });

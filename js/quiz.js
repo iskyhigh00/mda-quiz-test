@@ -372,7 +372,7 @@ async function preloadAndCountdown() {
 
   if (qTotal < 4) {
     overlay.style.display = 'none';
-    alert('No hay suficientes imágenes disponibles. Verifica tu conexión.');
+    await mdaAlert('No hay suficientes imágenes disponibles. Verifica tu conexión.');
     goTo('setup');
     return;
   }
@@ -392,7 +392,7 @@ async function preloadAndCountdown() {
 async function startQuiz() {
   playerName = playerName || localStorage.getItem('mda_user_name') || '';
   if (!playerName) {
-    alert('Primero configura tu nombre en el catálogo.');
+    await mdaAlert('Primero configura tu nombre en el catálogo.');
     goTo('catalog');
     return;
   }
@@ -432,7 +432,7 @@ async function startQuiz() {
 
   // --- Máquinas con dificultad 50% fácil / 30% media / 20% difícil ---
   if (mix.modelo > 0) {
-    if (pl.length < 4) { alert('Necesitas al menos 4 modelos con foto.'); return; }
+    if (pl.length < 4) { await mdaAlert('Necesitas al menos 4 modelos con foto.'); return; }
     const target = Math.max(1, Math.round(cfg.q * mix.modelo / 100));
 
     const easy = [], medium = [], hard = [];
@@ -481,7 +481,7 @@ async function startQuiz() {
   }
 
   allQs = shuffle(allQs);
-  if (allQs.length < 4) { alert('No hay suficientes preguntas disponibles.'); return; }
+  if (allQs.length < 4) { await mdaAlert('No hay suficientes preguntas disponibles.'); return; }
 
   qQuestionQueue = allQs.slice(0, Math.min(cfg.q, allQs.length));
   qTotal = qQuestionQueue.length;

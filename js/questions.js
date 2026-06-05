@@ -38,11 +38,11 @@ async function submitQuestion() {
   const optD = document.getElementById('sq-optd').value.trim();
   const statusEl = document.getElementById('sq-status');
 
-  if (!author) { alert('Ingresa tu nombre.'); return; }
-  if (!question) { alert('Escribe la pregunta.'); return; }
-  if (!correct) { alert('Escribe la respuesta correcta.'); return; }
-  if (!optB || !optC || !optD) { alert('Completa las 3 alternativas incorrectas.'); return; }
-  if (!_qSubmitFile) { alert('Selecciona una imagen.'); return; }
+  if (!author) { await mdaAlert('Ingresa tu nombre.'); return; }
+  if (!question) { await mdaAlert('Escribe la pregunta.'); return; }
+  if (!correct) { await mdaAlert('Escribe la respuesta correcta.'); return; }
+  if (!optB || !optC || !optD) { await mdaAlert('Completa las 3 alternativas incorrectas.'); return; }
+  if (!_qSubmitFile) { await mdaAlert('Selecciona una imagen.'); return; }
 
   statusEl.style.display = 'block';
   statusEl.style.color = 'var(--accent2)';
