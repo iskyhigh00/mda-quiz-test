@@ -84,6 +84,14 @@ function getClaveHora() {
   return String(n.getHours()).padStart(2, '0') + String(n.getMinutes()).padStart(2, '0');
 }
 
+function cacheImg(url, val) {
+  const keys = Object.keys(imgCache);
+  if (keys.length >= IMG_CACHE_MAX) {
+    keys.slice(0, Math.floor(IMG_CACHE_MAX / 3)).forEach(k => delete imgCache[k]);
+  }
+  imgCache[url] = val;
+}
+
 function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));

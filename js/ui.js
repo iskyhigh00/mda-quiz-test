@@ -26,7 +26,10 @@ function goTo(v) {
     qTotal = 0;
     qQueue = [];
   }
-  
+  if (currentView === 'view-catalog' && v !== 'catalog') {
+    if (typeof stopCatalogSlideshow === 'function') stopCatalogSlideshow();
+  }
+
   document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
   document.getElementById('view-' + v).classList.add('active');
   
@@ -39,6 +42,9 @@ function goTo(v) {
     );
   });
   
+  if (v === 'catalog') {
+    if (typeof startCatalogSlideshow === 'function') startCatalogSlideshow();
+  }
   if (v === 'ranking') {
     loadRanking();
     loadCompetition();

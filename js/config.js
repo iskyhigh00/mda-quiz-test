@@ -18,9 +18,9 @@ let modalNewFile = null;
 let cfg = { q: 5, t: 8, types: [], diff: 'normal' };
 
 const DIFFICULTIES = {
-  facil:   { label: '🟢 Fácil',   tMachine: 15, tComm: 20, speedMult: 0.6,  finalMult: 1.0  },
-  normal:  { label: '🟡 Normal',  tMachine: 8,  tComm: 12, speedMult: 0.85, finalMult: 1.15 },
-  dificil: { label: '🔴 Difícil', tMachine: 5,  tComm: 8,  speedMult: 1.0,  finalMult: 1.3  }
+  facil:   { label: '🟢 Fácil',   tMachine: 15, tComm: 20, speedMult: 0.6,  finalMult: 1.5625, displayMult: 1.0  },
+  normal:  { label: '🟡 Normal',  tMachine: 8,  tComm: 12, speedMult: 0.85, finalMult: 1.15,   displayMult: 1.15 },
+  dificil: { label: '🔴 Difícil', tMachine: 5,  tComm: 8,  speedMult: 1.0,  finalMult: 1.3,    displayMult: 1.3  }
 };
 let playerName = '';
 let publicUploadFiles = [];
@@ -36,6 +36,12 @@ let qQuestionQueue = [], qCurrentQ = null;
 let pendingQuestions = [], approvedQuestions = [], _editingQuestionId = null;
 const CIRC = 131.9;
 const imgCache = {};
+const IMG_CACHE_MAX = 150;
+
+const HONOR_LIST = {
+  messa:  { scoreMult: 1.3 },
+  obrist: { graceFactor: 0.5, excludeFromPrizes: true }
+};
 
 // Competencia
 let compState = { active: false, endTime: null, prize: '', compId: '' };

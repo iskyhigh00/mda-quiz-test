@@ -333,7 +333,7 @@ async function finishCompetition() {
     if (scores.length) {
       const best = {};
       scores.forEach(x => { if (!best[x.name] || x.pts > best[x.name].pts) best[x.name] = x; });
-      const EXCLUDED = ['obrist'];
+      const EXCLUDED = Object.keys(HONOR_LIST).filter(k => HONOR_LIST[k].excludeFromPrizes);
       const ranked = Object.values(best).filter(x => !EXCLUDED.includes(x.name.toLowerCase().trim())).sort((a, b) => b.pts - a.pts);
       if (ranked.length) {
         const winner = ranked[0];

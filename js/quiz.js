@@ -89,15 +89,17 @@ function pickDiffChip(diff, el) {
 
 function updateSetupChips() {
   const d = DIFFICULTIES[cfg.diff] || DIFFICULTIES.normal;
+  const displayMult = d.displayMult !== undefined ? d.displayMult : d.finalMult;
   [5, 10, 20].forEach(q => {
     const el = document.getElementById('chip-pts-' + q);
     const base = maxPtsConfig[q] || (q === 5 ? 1000 : q === 10 ? 1200 : 1300);
-    if (el) el.textContent = '≤ ' + Math.round(base * d.finalMult) + ' pts';
+    if (el) el.textContent = '≤ ' + Math.round(base * displayMult) + ' pts';
   });
 }
 
 function vipMult() {
-  return playerName.trim().toLowerCase() === 'messa' ? 1.3 : 1;
+  const entry = HONOR_LIST[playerName.trim().toLowerCase()];
+  return entry && entry.scoreMult ? entry.scoreMult : 1;
 }
 
 function timerMult() {
@@ -105,7 +107,8 @@ function timerMult() {
 }
 
 function graceExtra() {
-  return playerName.trim().toLowerCase() === 'obrist' ? 0.5 : 0;
+  const entry = HONOR_LIST[playerName.trim().toLowerCase()];
+  return entry && entry.graceFactor ? entry.graceFactor : 0;
 }
 
 function calcPts(ms) {
@@ -333,14 +336,14 @@ async function preloadAndCountdown() {
     }
     const img = new Image();
     img.onload = () => {
-      imgCache[url] = img;
+      cacheImg(url, img);
       loaded++;
       cdStatus.textContent = 'Cargando imágenes... ' + loaded + '/' + totalToLoad;
       cdBar.style.width = (loaded / totalToLoad * 60) + '%';
       resolve();
     };
     img.onerror = () => {
-      imgCache[url] = 'error';
+      cacheImg(url, 'error');
       loaded++;
       cdStatus.textContent = 'Cargando imágenes... ' + loaded + '/' + totalToLoad;
       cdBar.style.width = (loaded / totalToLoad * 60) + '%';
@@ -482,7 +485,8 @@ async function startQuiz() {
 
 async function saveIncompleteGame() {
   if (!playerName || qNum === 0) return;
-  const acc = qNum > 0 ? Math.round(qCorrect / qNum * 100) : 0;
+  const answered = qCorrect + qWrong;
+  const acc = answered > 0 ? Math.round(qCorrect / answered * 100) : 0;
   try {
     await sbPost('/rest/v1/scores', {
       name: playerName,
