@@ -4,6 +4,8 @@
 
 // Aplicar paleta guardada antes de renderizar
 loadSavedPalette();
+const _vEl = document.getElementById('app-version');
+if (_vEl) _vEl.textContent = 'v' + APP_VERSION;
 // Cargar todos los datos y arrancar la app
 loadMachines();
 loadResetConfig();

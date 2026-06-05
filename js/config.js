@@ -2,6 +2,8 @@
 // CONFIGURACIÓN Y VARIABLES GLOBALES
 // ============================================
 
+const APP_VERSION = '1.1.0';
+
 // Supabase
 const SB = 'https://etapmrnynqtqqjleujok.supabase.co';
 const KEY = 'sb_publishable_1GjAGxMyz7BTBa4NLVzAEw_-GPKqFCN';
