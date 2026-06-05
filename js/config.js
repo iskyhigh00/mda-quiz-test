@@ -36,6 +36,12 @@ let qQuestionQueue = [], qCurrentQ = null;
 let pendingQuestions = [], approvedQuestions = [], _editingQuestionId = null;
 const CIRC = 131.9;
 const imgCache = {};
+const IMG_CACHE_MAX = 150;
+
+const HONOR_LIST = {
+  messa:  { scoreMult: 1.3 },
+  obrist: { graceFactor: 0.5, excludeFromPrizes: true }
+};
 
 // Competencia
 let compState = { active: false, endTime: null, prize: '', compId: '' };

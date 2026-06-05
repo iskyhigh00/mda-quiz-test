@@ -114,15 +114,19 @@ function stopCatalogSlideshow() {
   if (_slideInterval) { clearInterval(_slideInterval); _slideInterval = null; }
 }
 
+let _filterTO = null;
 function filterCatalog() {
-  const q = document.getElementById('search').value.toLowerCase();
-  let v = 0;
-  document.querySelectorAll('.card').forEach(c => {
-    const s = c.dataset.name.includes(q);
-    c.style.display = s ? '' : 'none';
-    if (s) v++;
-  });
-  document.getElementById('cat-count').textContent = v + ' modelo' + (v !== 1 ? 's' : '');
+  clearTimeout(_filterTO);
+  _filterTO = setTimeout(() => {
+    const q = document.getElementById('search').value.toLowerCase();
+    let v = 0;
+    document.querySelectorAll('.card').forEach(c => {
+      const s = c.dataset.name.includes(q);
+      c.style.display = s ? '' : 'none';
+      if (s) v++;
+    });
+    document.getElementById('cat-count').textContent = v + ' modelo' + (v !== 1 ? 's' : '');
+  }, 200);
 }
 
 // ========== LIGHTBOX ==========
