@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Estado BDD — MDAs Casino</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: monospace; background: #0a0a12; color: #e8e4f0; padding: 24px; max-width: 900px; margin: 0 auto; }
+  h2 { color: #06b6d4; margin-bottom: 4px; }
+  p  { color: #64748b; font-size: 0.85rem; margin: 4px 0 16px; }
+  .row { display: flex; gap: 8px; margin-bottom: 16px; }
+  button { background: #7c3aed; color: white; border: none; padding: 10px 22px; border-radius: 8px; font-size: 0.9rem; cursor: pointer; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.sec { background: #2d2d4e; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .card { background: #12121e; border: 1px solid #2d2d4e; border-radius: 10px; padding: 14px 16px; }
+  .card.ok   { border-color: #10b981; }
+  .card.err  { border-color: #ef4444; }
+  .card.warn { border-color: #f59e0b; }
+  .card-title { font-size: 0.78rem; color: #64748b; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .card-count { font-size: 2rem; font-weight: bold; color: #e8e4f0; line-height: 1; }
+  .card-count.ok   { color: #10b981; }
+  .card-count.err  { color: #ef4444; }
+  .card-sub { font-size: 0.75rem; color: #64748b; margin-top: 4px; }
+
+  .section { background: #12121e; border: 1px solid #2d2d4e; border-radius: 10px; padding: 16px; margin-bottom: 12px; }
+  .section h3 { color: #06b6d4; font-size: 0.85rem; margin-bottom: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+  th { text-align: left; color: #64748b; padding: 4px 8px; border-bottom: 1px solid #2d2d4e; }
+  td { padding: 5px 8px; border-bottom: 1px solid #1a1a2e; word-break: break-all; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  tr:hover td { background: #1a1a2e; }
+  .tag { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 0.7rem; }
+  .tag.approved { background: #064e3b; color: #10b981; }
+  .tag.pending  { background: #451a03; color: #f59e0b; }
+  .tag.rejected { background: #450a0a; color: #ef4444; }
+  .storage-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 6px; margin-top: 8px; }
+  .storage-thumb { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; background: #1a1a2e; }
+  #spinner { display: none; color: #06b6d4; font-size: 0.85rem; margin-left: 8px; }
+</style>
+</head>
+<body>
+<h2>🔍 Estado de la base de datos — MDAs Casino</h2>
+<p>Verifica tablas, registros y storage del proyecto Supabase.</p>
+
+<div class="row">
+  <button id="btn" onclick="run()">▶ Verificar ahora</button>
+  <button class="sec" onclick="location.reload()">↺ Limpiar</button>
+  <span id="spinner">⏳ Verificando...</span>
+</div>
+
+<div id="cards" class="grid"></div>
+<div id="sections"></div>
+
+<script>
+const SB  = 'https://xomyutrarimpefhwxnij.supabase.co';
+const KEY = 'sb_publishable_GMFe8QUEC5OPKFLwKxXOBA_Yl1dBykn';
+const BUCKET = 'mda-photos';
+
+async function get(path) {
+  const r = await fetch(SB + path, { headers: { apikey: KEY, Authorization: 'Bearer ' + KEY } });
+  return r.json();
+}
+
+function card(title, count, sub, status) {
+  return `<div class="card ${status}">
+    <div class="card-title">${title}</div>
+    <div class="card-count ${status}">${count}</div>
+    <div class="card-sub">${sub}</div>
+  </div>`;
+}
+
+function table(cols, rows, renderRow) {
+  if (!rows.length) return '<div style="color:#64748b;font-size:0.8rem;padding:8px 0">Sin registros</div>';
+  return `<table><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>
+    ${rows.map(renderRow).join('')}
+  </tbody></table>`;
+}
+function tr(...cells) { return `<tr>${cells.map(c=>`<td title="${String(c).replace(/"/g,'&quot;')}">${c??''}</td>`).join('')}</tr>`; }
+function tag(v) { return `<span class="tag ${v}">${v}</span>`; }
+
+async function run() {
+  document.getElementById('btn').disabled = true;
+  document.getElementById('spinner').style.display = 'inline';
+  document.getElementById('cards').innerHTML = '';
+  document.getElementById('sections').innerHTML = '';
+
+  try {
+    // === TABLAS ===
+    const [machines, notes, questions, scores, answers, winners, settings] = await Promise.all([
+      get('/rest/v1/machines?select=id,name,photo_url,photo_urls,sort_order&order=sort_order.asc&limit=500'),
+      get('/rest/v1/machine_notes?select=id,machine_id,note,author,created_at&order=created_at.desc&limit=500'),
+      get('/rest/v1/quiz_questions?select=id,type,question_text,status,machine_id,created_at&order=created_at.desc&limit=500'),
+      get('/rest/v1/scores?select=id,name,pts,season,completed,created_at&order=pts.desc&limit=500'),
+      get('/rest/v1/quiz_answers?select=id,player_name,machine_name,correct,season&order=id.desc&limit=200'),
+      get('/rest/v1/winners_history?select=id,player_name,pts,prize,period_label&order=id.desc&limit=50'),
+      get('/rest/v1/settings?select=key,value&order=key.asc'),
+    ]);
+
+    // === STORAGE ===
+    const storRes = await fetch(`${SB}/storage/v1/object/list/${BUCKET}`, {
+      method: 'POST',
+      headers: { apikey: KEY, Authorization: 'Bearer ' + KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prefix: '', limit: 1000, offset: 0, sortBy: { column: 'name', order: 'asc' } })
+    });
+    const storFiles = await storRes.json();
+    const fileCount = Array.isArray(storFiles) ? storFiles.length : 0;
+
+    const withPhoto = machines.filter(m => m.photo_url).length;
+    const approved  = questions.filter(q => q.status === 'approved').length;
+    const pending   = questions.filter(q => q.status === 'pending').length;
+
+    // === CARDS ===
+    document.getElementById('cards').innerHTML = [
+      card('Máquinas', machines.length, `${withPhoto} con foto`, machines.length ? 'ok' : 'warn'),
+      card('Notas catálogo', notes.length, 'machine_notes', notes.length >= 0 ? 'ok' : 'err'),
+      card('Preguntas quiz', questions.length, `${approved} aprobadas · ${pending} pendientes`, questions.length ? 'ok' : 'warn'),
+      card('Puntajes', scores.length, 'scores', scores.length ? 'ok' : 'warn'),
+      card('Respuestas quiz', answers.length, 'quiz_answers', 'ok'),
+      card('Ganadores', winners.length, 'winners_history', 'ok'),
+      card('Settings', Array.isArray(settings) ? settings.length : 0, 'configuración', Array.isArray(settings) && settings.length >= 9 ? 'ok' : 'warn'),
+      card('Fotos en storage', fileCount, `bucket: ${BUCKET}`, fileCount ? 'ok' : 'warn'),
+    ].join('');
+
+    const sec = document.getElementById('sections');
+
+    // Máquinas
+    sec.innerHTML += `<div class="section"><h3>🎰 Máquinas (${machines.length})</h3>
+      ${table(['ID','Nombre','Foto principal','Fotos extra'], machines.slice(0,20), m => {
+        const extras = (() => { try { return JSON.parse(m.photo_urls||'[]').length; } catch(e) { return '?'; } })();
+        return tr(m.id, m.name, m.photo_url ? '✅' : '❌', extras);
+      })}
+      ${machines.length > 20 ? `<div style="color:#64748b;font-size:0.75rem;margin-top:6px;">+ ${machines.length-20} más</div>` : ''}
+    </div>`;
+
+    // Preguntas
+    sec.innerHTML += `<div class="section"><h3>❓ Preguntas de quiz (${questions.length})</h3>
+      ${table(['ID','Tipo','Pregunta','Estado','Máquina ID'], questions.slice(0,15), q =>
+        tr(q.id, q.type, q.question_text?.substring(0,60), tag(q.status), q.machine_id||'—')
+      )}
+    </div>`;
+
+    // Puntajes top 10
+    sec.innerHTML += `<div class="section"><h3>🏆 Top puntajes (${scores.length} total)</h3>
+      ${table(['ID','Nombre','Pts','Season','Completado','Fecha'], scores.slice(0,10), s =>
+        tr(s.id, s.name, s.pts, s.season, s.completed ? '✅' : '⬜', s.created_at?.substring(0,10))
+      )}
+    </div>`;
+
+    // Settings
+    sec.innerHTML += `<div class="section"><h3>⚙️ Settings</h3>
+      ${Array.isArray(settings) ? table(['Key','Value'], settings, s => tr(s.key, s.value)) : '<div style="color:#ef4444">Error cargando settings</div>'}
+    </div>`;
+
+    // Winners
+    if (winners.length) {
+      sec.innerHTML += `<div class="section"><h3>🥇 Historial ganadores</h3>
+        ${table(['ID','Jugador','Pts','Premio','Período'], winners.slice(0,10), w =>
+          tr(w.id, w.player_name, w.pts, w.prize, w.period_label)
+        )}
+      </div>`;
+    }
+
+    // Storage previews
+    if (fileCount > 0) {
+      const previews = Array.isArray(storFiles) ? storFiles.slice(0, 24) : [];
+      sec.innerHTML += `<div class="section"><h3>📸 Storage — ${fileCount} archivos (primeros 24)</h3>
+        <div class="storage-grid">
+          ${previews.map(f => `<img class="storage-thumb" src="${SB}/storage/v1/object/public/${BUCKET}/${f.name}" title="${f.name}" onerror="this.style.opacity=0.2">`).join('')}
+        </div>
+      </div>`;
+    }
+
+  } catch(e) {
+    document.getElementById('sections').innerHTML = `<div class="section" style="border-color:#ef4444;color:#ef4444;">❌ Error: ${e.message}</div>`;
+  }
+
+  document.getElementById('btn').disabled = false;
+  document.getElementById('spinner').style.display = 'none';
+}
+</script>
+</body>
+</html>
