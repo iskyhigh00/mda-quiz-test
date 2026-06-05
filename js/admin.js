@@ -664,11 +664,13 @@ async function deleteNote(id) {
 
 // ========== EDITAR PUNTAJES ==========
 let scoresMgmt = [];
+let _selectedScoreIds = new Set();
 
 async function loadScoresMgmt() {
   const list = document.getElementById('scores-mgmt-list');
   if (!list) return;
   list.innerHTML = '<div class="loading">Cargando...</div>';
+  _selectedScoreIds.clear();
   try {
     const season = currentSeason();
     scoresMgmt = await sbGet('/rest/v1/scores?season=eq.' + encodeURIComponent(season) + '&order=pts.desc&limit=500');
@@ -687,18 +689,102 @@ function renderScoresMgmt() {
     list.innerHTML = '<div class="no-data">Sin puntajes.</div>';
     return;
   }
-  list.innerHTML = '<table><thead><tr><th>Jugador</th><th>Puntaje</th><th>Prec.</th><th>Preguntas</th><th>Seg.</th><th>Fecha</th><th></th></tr></thead><tbody>' +
-    filtered.slice(0, 100).map(s => {
+  const shown = filtered.slice(0, 100);
+  const selCount = shown.filter(s => _selectedScoreIds.has(s.id)).length;
+  const allChecked = shown.length > 0 && selCount === shown.length;
+
+  list.innerHTML =
+    '<div style="padding:8px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">' +
+      '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.78rem;color:var(--muted);">' +
+        '<input type="checkbox" data-scores-master ' + (allChecked ? 'checked' : '') + ' onchange="toggleSelectAllScores(this)">' +
+        ' Seleccionar todo' +
+      '</label>' +
+      '<button class="btn btn-danger btn-sm" data-scores-del onclick="deleteSelectedScores()"' +
+        (selCount === 0 ? ' disabled style="opacity:0.4;"' : '') + '>' +
+        '🗑️ Eliminar' + (selCount > 0 ? ' (' + selCount + ')' : '') +
+      '</button>' +
+    '</div>' +
+    '<table><thead><tr>' +
+      '<th style="width:28px;padding:4px 8px;"></th>' +
+      '<th>Jugador</th><th>Puntaje</th><th>Prec.</th><th>Pregs.</th><th>Seg.</th><th>Fecha</th><th></th>' +
+    '</tr></thead><tbody>' +
+    shown.map(s => {
       const d = new Date(s.created_at).toLocaleDateString('es-CL');
-      return '<tr><td><strong>' + s.name + '</strong></td>' +
+      const sel = _selectedScoreIds.has(s.id);
+      return '<tr' + (sel ? ' style="background:rgba(239,68,68,0.08);"' : '') + '>' +
+        '<td style="padding:4px 8px;"><input type="checkbox" data-sid="' + s.id + '" ' + (sel ? 'checked' : '') + ' onchange="toggleScoreSelect(' + s.id + ',this)"></td>' +
+        '<td><strong>' + s.name + '</strong></td>' +
         '<td style="color:var(--gold);font-weight:800">' + s.pts + '</td>' +
         '<td>' + (s.accuracy || 0) + '%</td>' +
         '<td style="color:var(--accent2)">' + (s.total || '?') + '</td>' +
         '<td>' + (s.timer_sec || '?') + 's</td>' +
         '<td style="color:var(--muted)">' + d + '</td>' +
-        '<td style="white-space:nowrap"><button class="btn btn-secondary btn-sm" onclick="openEditScore(' + s.id + ',' + s.pts + ')">✏️</button> <button class="btn btn-danger btn-sm" onclick="deleteScore(' + s.id + ')">🗑️</button></td></tr>';
+        '<td style="white-space:nowrap">' +
+          '<button class="btn btn-secondary btn-sm" onclick="openEditScore(' + s.id + ',' + s.pts + ')">✏️</button> ' +
+          '<button class="btn btn-danger btn-sm" onclick="deleteScore(' + s.id + ')">🗑️</button>' +
+        '</td>' +
+      '</tr>';
     }).join('') +
     '</tbody></table>';
+}
+
+function toggleScoreSelect(id, cb) {
+  if (cb.checked) _selectedScoreIds.add(id);
+  else _selectedScoreIds.delete(id);
+  const row = cb.closest('tr');
+  if (row) row.style.background = cb.checked ? 'rgba(239,68,68,0.08)' : '';
+  _refreshScoreSelectionUI();
+}
+
+function toggleSelectAllScores(masterCb) {
+  const q = (document.getElementById('scores-search')?.value || '').toLowerCase();
+  const shown = scoresMgmt.filter(s => (s.name || '').toLowerCase().includes(q)).slice(0, 100);
+  const list = document.getElementById('scores-mgmt-list');
+  shown.forEach(s => {
+    if (masterCb.checked) _selectedScoreIds.add(s.id);
+    else _selectedScoreIds.delete(s.id);
+    const rowCb = list?.querySelector('input[data-sid="' + s.id + '"]');
+    if (rowCb) {
+      rowCb.checked = masterCb.checked;
+      const row = rowCb.closest('tr');
+      if (row) row.style.background = masterCb.checked ? 'rgba(239,68,68,0.08)' : '';
+    }
+  });
+  _refreshScoreSelectionUI();
+}
+
+function _refreshScoreSelectionUI() {
+  const list = document.getElementById('scores-mgmt-list');
+  if (!list) return;
+  const q = (document.getElementById('scores-search')?.value || '').toLowerCase();
+  const shown = scoresMgmt.filter(s => (s.name || '').toLowerCase().includes(q)).slice(0, 100);
+  const selCount = shown.filter(s => _selectedScoreIds.has(s.id)).length;
+  const delBtn = list.querySelector('[data-scores-del]');
+  if (delBtn) {
+    delBtn.disabled = selCount === 0;
+    delBtn.style.opacity = selCount === 0 ? '0.4' : '';
+    delBtn.textContent = '🗑️ Eliminar' + (selCount > 0 ? ' (' + selCount + ')' : '');
+  }
+  const masterCb = list.querySelector('[data-scores-master]');
+  if (masterCb) {
+    masterCb.checked = shown.length > 0 && selCount === shown.length;
+    masterCb.indeterminate = selCount > 0 && selCount < shown.length;
+  }
+}
+
+async function deleteSelectedScores() {
+  if (_selectedScoreIds.size === 0) return;
+  if (!confirm('¿Eliminar ' + _selectedScoreIds.size + ' partida(s) seleccionada(s)?')) return;
+  const ids = [..._selectedScoreIds];
+  try {
+    const r = await sbDelete('/rest/v1/scores?id=in.(' + ids.join(',') + ')');
+    if (!r.ok && r.status !== 204) { const e = await r.text(); alert('Error: ' + e); return; }
+    scoresMgmt = scoresMgmt.filter(s => !_selectedScoreIds.has(s.id));
+    _selectedScoreIds.clear();
+    renderScoresMgmt();
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
 }
 
 async function openEditScore(id, currentPts) {
