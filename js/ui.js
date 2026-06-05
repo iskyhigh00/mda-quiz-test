@@ -2,12 +2,27 @@
 // UI: NAVEGACIÓN, MODALES, WELCOME
 // ============================================
 
+// Seguimiento de historial para modales y diálogos
+let _modalHistoryId = null;
+let _skipNextPopstate = false;
+
 function openModal(id) {
   document.getElementById(id).classList.add('open');
+  if (id !== 'modal-dialog') {
+    history.pushState({ modal: id }, '');
+    _modalHistoryId = id;
+  }
 }
 
 function closeModal(id) {
-  document.getElementById(id).classList.remove('open');
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('open');
+  if (id !== 'modal-dialog' && _modalHistoryId === id) {
+    _modalHistoryId = null;
+    _skipNextPopstate = true;
+    history.back();
+  }
 }
 
 function goTo(v) {
@@ -162,6 +177,7 @@ function setSyncBadge(s) {
 // ===== CUSTOM DIALOGS =====
 let _dlgResolve = null;
 let _dlgType = null;
+let _dlgHistoryPushed = false;
 
 function _showDialog(type, message, def, destructive) {
   return new Promise(resolve => {
@@ -175,9 +191,15 @@ function _showDialog(type, message, def, destructive) {
     if (type === 'prompt') { input.value = def || ''; setTimeout(() => input.focus(), 80); }
     btns.innerHTML = '';
     const done = val => {
-      closeModal('modal-dialog');
+      if (!_dlgResolve) return;
       _dlgResolve = null;
       _dlgType = null;
+      document.getElementById('modal-dialog').classList.remove('open');
+      if (_dlgHistoryPushed) {
+        _dlgHistoryPushed = false;
+        _skipNextPopstate = true;
+        history.back();
+      }
       resolve(val);
     };
     const mkBtn = (text, cls, val) => {
@@ -201,7 +223,9 @@ function _showDialog(type, message, def, destructive) {
       input.onkeydown = ev => { if (ev.key === 'Enter') done(input.value); };
       btns.appendChild(ok);
     }
-    openModal('modal-dialog');
+    history.pushState({ dialog: true }, '');
+    _dlgHistoryPushed = true;
+    document.getElementById('modal-dialog').classList.add('open');
   });
 }
 
@@ -209,19 +233,45 @@ function mdaAlert(msg) { return _showDialog('alert', msg); }
 function mdaConfirm(msg, destructive) { return _showDialog('confirm', msg, null, destructive); }
 function mdaPrompt(msg, def) { return _showDialog('prompt', msg, def); }
 
-// Evento Escape
+// Tecla Escape
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    if (_dlgResolve) {
-      const resolve = _dlgResolve;
-      const type = _dlgType;
-      closeModal('modal-dialog');
-      _dlgResolve = null;
-      _dlgType = null;
-      resolve(type === 'alert' ? undefined : type === 'confirm' ? false : null);
-    } else {
-      if (typeof closeLb === 'function') closeLb();
-      document.querySelectorAll('.modal').forEach(m => m.classList.remove('open'));
+  if (e.key !== 'Escape') return;
+  if (_dlgResolve) {
+    const resolve = _dlgResolve;
+    const type = _dlgType;
+    _dlgResolve = null;
+    _dlgType = null;
+    document.getElementById('modal-dialog').classList.remove('open');
+    if (_dlgHistoryPushed) {
+      _dlgHistoryPushed = false;
+      _skipNextPopstate = true;
+      history.back();
     }
+    resolve(type === 'alert' ? undefined : type === 'confirm' ? false : null);
+  } else {
+    if (typeof closeLb === 'function') closeLb();
+    document.querySelectorAll('.modal.open').forEach(m => {
+      if (m.id !== 'modal-dialog') closeModal(m.id);
+    });
+  }
+});
+
+// Botón retroceder del navegador — cerrar modales y diálogos sin navegar
+window.addEventListener('popstate', () => {
+  if (_skipNextPopstate) { _skipNextPopstate = false; return; }
+  if (_dlgHistoryPushed && _dlgResolve) {
+    _dlgHistoryPushed = false;
+    const resolve = _dlgResolve;
+    const type = _dlgType;
+    _dlgResolve = null;
+    _dlgType = null;
+    document.getElementById('modal-dialog').classList.remove('open');
+    resolve(type === 'alert' ? undefined : type === 'confirm' ? false : null);
+    return;
+  }
+  if (_modalHistoryId) {
+    const id = _modalHistoryId;
+    _modalHistoryId = null;
+    document.getElementById(id)?.classList.remove('open');
   }
 });
