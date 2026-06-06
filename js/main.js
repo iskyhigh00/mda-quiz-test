@@ -2,27 +2,18 @@
 // INICIALIZACIÓN PRINCIPAL
 // ============================================
 
-// PWA: instalación
+// PWA: instalación (el listener está en el <head> para capturarlo a tiempo)
 let _installPrompt = null;
 
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault();
-  _installPrompt = e;
-  document.getElementById('install-btn-welcome')?.style.setProperty('display', 'block');
-  document.getElementById('install-btn-nav')?.style.setProperty('display', 'flex');
-});
-
-window.addEventListener('appinstalled', () => {
-  _installPrompt = null;
-  document.getElementById('install-btn-welcome')?.style.setProperty('display', 'none');
-  document.getElementById('install-btn-nav')?.style.setProperty('display', 'none');
-});
-
 async function triggerInstall() {
-  if (!_installPrompt) return;
-  _installPrompt.prompt();
-  const { outcome } = await _installPrompt.userChoice;
-  if (outcome === 'accepted') _installPrompt = null;
+  const prompt = window._installPrompt || _installPrompt;
+  if (!prompt) return;
+  prompt.prompt();
+  const { outcome } = await prompt.userChoice;
+  if (outcome === 'accepted') {
+    window._installPrompt = null;
+    _installPrompt = null;
+  }
 }
 
 // Aplicar paleta guardada antes de renderizar

@@ -12,6 +12,21 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/icon.svg">
 <link rel="stylesheet" href="style.css">
+<script>
+  // Capturar beforeinstallprompt lo antes posible (antes de cargar los JS)
+  window._installPrompt = null;
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    window._installPrompt = e;
+    document.getElementById('install-btn-welcome')?.style.setProperty('display', 'block');
+    document.getElementById('install-btn-nav')?.style.setProperty('display', 'flex');
+  });
+  window.addEventListener('appinstalled', () => {
+    window._installPrompt = null;
+    document.getElementById('install-btn-welcome')?.style.setProperty('display', 'none');
+    document.getElementById('install-btn-nav')?.style.setProperty('display', 'none');
+  });
+</script>
 </head>
 <body>
 
