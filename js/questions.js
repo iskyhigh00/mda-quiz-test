@@ -4,6 +4,18 @@
 
 let _qSubmitFile = null;
 let _sqMachineId = null;
+let _qInstructions = null;
+
+async function _loadQInstructions() {
+  if (_qInstructions !== null) return _qInstructions;
+  try {
+    const rows = await sbGet('/rest/v1/settings?key=eq.question_instructions');
+    _qInstructions = (rows[0]?.value || '').trim();
+  } catch(e) {
+    _qInstructions = '';
+  }
+  return _qInstructions;
+}
 
 function toggleSqMachine() {
   const na = document.getElementById('sq-machine-na').checked;
@@ -33,6 +45,15 @@ function selectSqMachine(id, name) {
 }
 
 async function openSubmitQuestion() {
+  const instr = await _loadQInstructions();
+  if (instr) {
+    const seen = parseInt(localStorage.getItem('mda_q_instr_seen') || '0');
+    if (seen < 2) {
+      await mdaAlert(instr);
+      localStorage.setItem('mda_q_instr_seen', seen + 1);
+    }
+  }
+
   document.getElementById('sq-author').value = playerName || localStorage.getItem('mda_user_name') || '';
   document.getElementById('sq-anon').checked = false;
   document.getElementById('sq-type').value = 'falla';
