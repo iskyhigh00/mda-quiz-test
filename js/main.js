@@ -13,13 +13,33 @@ loadCompetition();
 loadMaxPts();
 initApp();
 
+function showUpdateBanner() {
+  const b = document.getElementById('update-banner');
+  if (b) b.style.display = 'flex';
+}
+
+async function checkVersion() {
+  try {
+    const r = await fetch('./version.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) return;
+    const { version } = await r.json();
+    if (version && version !== APP_VERSION) showUpdateBanner();
+  } catch(e) {}
+}
+
 if ('serviceWorker' in navigator) {
   const hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.register('./sw.js').catch(() => {});
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (hadController) location.reload();
+    if (hadController) showUpdateBanner();
   });
+  // Verificar actualizaciones del SW cada 5 minutos
+  setInterval(() => navigator.serviceWorker.ready.then(r => r.update()), 300000);
 }
+
+// Chequear version.json al cargar y cada 5 minutos
+checkVersion();
+setInterval(checkVersion, 300000);
 
 // Polling de estado de competencia cada 2 minutos
 setInterval(loadCompetition, 120000);

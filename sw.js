@@ -1,4 +1,4 @@
-const CACHE = 'mda-v3';
+const CACHE = 'mda-v4';
 const IMG_CACHE = 'mda-images-v1';
 const SHELL = [
   './',
@@ -51,6 +51,12 @@ self.addEventListener('fetch', e => {
         }
       })
     );
+    return;
+  }
+
+  // version.json: siempre red, nunca caché
+  if (url.endsWith('/version.json')) {
+    e.respondWith(fetch(e.request, { cache: 'no-store' }).catch(() => new Response('{}', { status: 200 })));
     return;
   }
 
