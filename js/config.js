@@ -2,7 +2,7 @@
 // CONFIGURACIÓN Y VARIABLES GLOBALES
 // ============================================
 
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.3.1';
 
 // Supabase
 const SB = 'https://xomyutrarimpefhwxnij.supabase.co';
