@@ -208,11 +208,14 @@ function galleryNav(dir) {
 }
 
 let _lbHistoryPushed = false;
+let _lbQuestions = [];
+let _lbQIdx = 0;
 
 function closeLb() {
   const lb = document.getElementById('lightbox');
   if (!lb.classList.contains('open')) return;
   closeImgPreview();
+  closeQBrowser();
   lb.classList.remove('open');
   if (_lbHistoryPushed) {
     _lbHistoryPushed = false;
@@ -224,6 +227,7 @@ window.addEventListener('popstate', () => {
   const lb = document.getElementById('lightbox');
   if (lb?.classList.contains('open')) {
     closeImgPreview();
+    closeQBrowser();
     _lbHistoryPushed = false;
     lb.classList.remove('open');
   }
@@ -342,25 +346,48 @@ async function loadLbMachineQuestions(machineId) {
   const wrap = document.getElementById('lb-questions-list');
   if (!wrap) return;
   wrap.style.display = 'none';
+  _lbQuestions = [];
   try {
     const qs = await sbGet('/rest/v1/quiz_questions?machine_id=eq.' + machineId + '&status=eq.approved&order=created_at.desc&limit=50');
     if (!qs.length) return;
+    _lbQuestions = qs;
     wrap.style.display = '';
-    wrap.innerHTML = '<div class="lb-head" style="font-size:0.85rem;padding:8px 0 4px;">ℹ️ Datos técnicos</div>' +
-      qs.map(q => {
-        const label = q.question_text.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\s*\?+\s*$/, '').trim();
-        const answer = q.correct_answer.replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        const imgHtml = q.image_url
-          ? '<img src="' + getImgUrl(q.image_url) + '" onclick="openImgPreview(' + JSON.stringify(q.image_url) + ')" style="width:100%;max-height:180px;object-fit:cover;border-radius:6px;cursor:zoom-in;margin-bottom:6px;" loading="lazy">'
-          : '';
-        return '<div class="lb-note-card">' +
-          imgHtml +
-          '<div class="lb-note-card-text" style="font-size:0.82rem;">' + label + ': <strong>' + answer + '</strong></div>' +
-          '</div>';
-      }).join('');
+    wrap.innerHTML = '<button class="lb-close" onclick="openQBrowser()" style="width:100%;margin:4px 0;">❓ Ver preguntas (' + qs.length + ')</button>';
   } catch(e) {
     wrap.style.display = 'none';
   }
+}
+
+function openQBrowser() {
+  if (!_lbQuestions.length) return;
+  _lbQIdx = 0;
+  renderQBrowser();
+  document.getElementById('q-browser-overlay').style.display = 'flex';
+}
+
+function closeQBrowser() {
+  const el = document.getElementById('q-browser-overlay');
+  if (el) el.style.display = 'none';
+}
+
+function qBrowserNav(dir) {
+  _lbQIdx = (_lbQIdx + dir + _lbQuestions.length) % _lbQuestions.length;
+  renderQBrowser();
+}
+
+function renderQBrowser() {
+  const q = _lbQuestions[_lbQIdx];
+  document.getElementById('qb-counter').textContent = (_lbQIdx + 1) + ' / ' + _lbQuestions.length;
+  const imgWrap = document.getElementById('qb-img');
+  imgWrap.innerHTML = q.image_url
+    ? '<img src="' + getImgUrl(q.image_url) + '" onclick="openImgPreview(' + JSON.stringify(q.image_url) + ')" style="max-width:100%;max-height:45vh;object-fit:contain;border-radius:8px;cursor:zoom-in;" loading="lazy">'
+    : '<div style="color:var(--muted);font-size:0.82rem;padding:16px 0;">Sin imagen</div>';
+  const label = q.question_text.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\s*\?+\s*$/, '').trim();
+  const answer = q.correct_answer.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  document.getElementById('qb-text').innerHTML = label + ': <strong>' + answer + '</strong>';
+  const single = _lbQuestions.length <= 1;
+  document.getElementById('qb-arr-l').style.visibility = single ? 'hidden' : 'visible';
+  document.getElementById('qb-arr-r').style.visibility = single ? 'hidden' : 'visible';
 }
 
 async function loadLbNotes(machineId) {
