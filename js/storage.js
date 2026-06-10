@@ -23,7 +23,7 @@ function resizeImgPromise(file, maxW, maxH) {
         c.width = w;
         c.height = h;
         c.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(c.toDataURL('image/jpeg', 0.84).split(',')[1]);
+        resolve(c.toDataURL('image/jpeg', 0.90).split(',')[1]);
       };
       img.src = e.target.result;
     };
@@ -35,8 +35,8 @@ function makeFilename(machineId, index) {
   return 'machine_' + machineId + '_' + index + '_' + Date.now() + '.jpg';
 }
 
-async function uploadPhoto(file, filename) {
-  const b64 = await resizeImgPromise(file, 400, 520);
+async function uploadPhoto(file, filename, maxW = 1200, maxH = 900) {
+  const b64 = await resizeImgPromise(file, maxW, maxH);
   const blob = b64ToBlob(b64, 'image/jpeg');
   const r = await fetch(STORAGE_URL + filename, {
     method: 'POST',

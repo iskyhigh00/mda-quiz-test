@@ -205,6 +205,10 @@
         </div>
         <div id="mix-total" class="mix-total">Total: 100%</div>
         <div style="margin-top:10px;font-size:0.75rem;color:var(--muted);">🎰 Dificultad automática: 50% fáciles · 30% medias · 20% difíciles (según historial)</div>
+        <div style="margin-top:12px;display:flex;align-items:center;gap:10px;">
+          <label class="form-label" style="margin:0;white-space:nowrap;">Mínimo de preguntas para habilitar categoría</label>
+          <input class="modal-input" id="min-q-per-type" type="number" min="1" max="500" style="width:80px;text-align:center;" value="15">
+        </div>
         <div style="margin-top:12px;"><label class="form-label">Instrucciones para aportar pregunta</label>
           <textarea class="modal-input" id="quiz-instructions" rows="3" style="margin-top:6px;resize:vertical;" placeholder="Instrucciones que verán los usuarios al aportar preguntas..."></textarea>
         </div>
@@ -334,7 +338,11 @@
     <div style="margin-bottom:6px;"><label class="form-label">❌ Alternativa 2</label><input class="modal-input" id="eq-optb" maxlength="120"></div>
     <div style="margin-bottom:6px;"><label class="form-label">❌ Alternativa 3</label><input class="modal-input" id="eq-optc" maxlength="120"></div>
     <div style="margin-bottom:10px;"><label class="form-label">❌ Alternativa 4</label><input class="modal-input" id="eq-optd" maxlength="120"></div>
-    <div id="eq-img-wrap" style="margin-bottom:10px;background:var(--surface);border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:60px;"></div>
+    <div style="margin-bottom:10px;">
+      <label class="form-label">Foto</label>
+      <div id="eq-img-wrap" style="background:var(--surface);border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:60px;margin-bottom:6px;"></div>
+      <label class="upload-label">📷 Cambiar foto<input type="file" accept="image/*" onchange="previewEqPhoto(this)" style="display:none"></label>
+    </div>
     <div id="eq-status" style="display:none;font-size:0.82rem;padding:6px 0;"></div>
     <div class="modal-btns" style="flex-wrap:wrap;gap:8px;">
       <button class="btn btn-primary" onclick="approveEditedQuestion()">✅ Aprobar</button>

@@ -2,5 +2,6 @@
 
 ## Flujo de trabajo
 
-- **Todos los cambios van directamente a `main`**. No usar feature branches.
-- Hacer commit y push a `main` al terminar cada tarea.
+- **Los cambios van al branch `test` primero**. Nunca directamente a `main`.
+- Hacer commit y push a `test` al terminar cada tarea.
+- El merge a `main` (producción) lo decide el usuario manualmente.
