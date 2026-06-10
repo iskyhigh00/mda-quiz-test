@@ -212,6 +212,7 @@ let _lbHistoryPushed = false;
 function closeLb() {
   const lb = document.getElementById('lightbox');
   if (!lb.classList.contains('open')) return;
+  closeImgPreview();
   lb.classList.remove('open');
   if (_lbHistoryPushed) {
     _lbHistoryPushed = false;
@@ -222,10 +223,24 @@ function closeLb() {
 window.addEventListener('popstate', () => {
   const lb = document.getElementById('lightbox');
   if (lb?.classList.contains('open')) {
+    closeImgPreview();
     _lbHistoryPushed = false;
     lb.classList.remove('open');
   }
 });
+
+function openImgPreview(url) {
+  const el = document.getElementById('img-preview-overlay');
+  const img = document.getElementById('img-preview-img');
+  if (!el || !img) return;
+  img.src = getImgUrl(url);
+  el.style.display = 'flex';
+}
+
+function closeImgPreview() {
+  const el = document.getElementById('img-preview-overlay');
+  if (el) el.style.display = 'none';
+}
 
 // Swipe táctil — sigue el dedo en tiempo real con preview de foto adyacente
 let _lbTouchX = 0;
@@ -331,13 +346,18 @@ async function loadLbMachineQuestions(machineId) {
     const qs = await sbGet('/rest/v1/quiz_questions?machine_id=eq.' + machineId + '&status=eq.approved&order=created_at.desc&limit=50');
     if (!qs.length) return;
     wrap.style.display = '';
-    wrap.innerHTML = '<div class="lb-head" style="font-size:0.85rem;padding:8px 0 4px;">❓ Preguntas de quiz (' + qs.length + ')</div>' +
-      qs.map(q =>
-        '<div class="lb-note-card">' +
-        '<div class="lb-note-card-text" style="font-size:0.82rem;font-weight:600;">' + q.question_text.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>' +
-        '<div class="lb-note-card-meta" style="color:var(--green);">✅ ' + q.correct_answer.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>' +
-        '</div>'
-      ).join('');
+    wrap.innerHTML = '<div class="lb-head" style="font-size:0.85rem;padding:8px 0 4px;">ℹ️ Datos técnicos</div>' +
+      qs.map(q => {
+        const label = q.question_text.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\s*\?+\s*$/, '').trim();
+        const answer = q.correct_answer.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const imgHtml = q.image_url
+          ? '<img src="' + getImgUrl(q.image_url) + '" onclick="openImgPreview(' + JSON.stringify(q.image_url) + ')" style="width:100%;max-height:180px;object-fit:cover;border-radius:6px;cursor:zoom-in;margin-bottom:6px;" loading="lazy">'
+          : '';
+        return '<div class="lb-note-card">' +
+          imgHtml +
+          '<div class="lb-note-card-text" style="font-size:0.82rem;">' + label + ': <strong>' + answer + '</strong></div>' +
+          '</div>';
+      }).join('');
   } catch(e) {
     wrap.style.display = 'none';
   }
