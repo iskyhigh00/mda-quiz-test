@@ -830,7 +830,7 @@ function updateMixTotal() {
 
 async function loadQuizTypeConfig() {
   try {
-    const rows = await sbGet('/rest/v1/settings?key=in.(quiz_type_mix,question_instructions)');
+    const rows = await sbGet('/rest/v1/settings?key=in.(quiz_type_mix,question_instructions,min_q_per_type)');
     const mixRow = rows.find(r => r.key === 'quiz_type_mix');
     const instrRow = rows.find(r => r.key === 'question_instructions');
     if (mixRow) {
@@ -845,6 +845,9 @@ async function loadQuizTypeConfig() {
     }
     const instr = document.getElementById('quiz-instructions');
     if (instr && instrRow) instr.value = instrRow.value || '';
+    const minQRow = rows.find(r => r.key === 'min_q_per_type');
+    const minQEl = document.getElementById('min-q-per-type');
+    if (minQEl && minQRow) minQEl.value = minQRow.value || '15';
   } catch (e) {
     console.error('loadQuizTypeConfig:', e);
   }
@@ -858,10 +861,12 @@ async function saveQuizConfig() {
   const total = Object.values(mix).reduce((s, v) => s + v, 0);
   if (total !== 100) { await mdaAlert('Los porcentajes deben sumar 100%. Suma actual: ' + total + '%'); return; }
   const instr = document.getElementById('quiz-instructions')?.value.trim() || '';
+  const minQ = parseInt(document.getElementById('min-q-per-type')?.value) || 15;
   try {
     await Promise.all([
       sbFetch('/rest/v1/settings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify({ key: 'quiz_type_mix', value: JSON.stringify(mix) }) }),
-      sbFetch('/rest/v1/settings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify({ key: 'question_instructions', value: instr }) })
+      sbFetch('/rest/v1/settings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify({ key: 'question_instructions', value: instr }) }),
+      sbFetch('/rest/v1/settings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify({ key: 'min_q_per_type', value: String(minQ) }) })
     ]);
     await mdaAlert('Configuración guardada.');
   } catch (e) {
@@ -965,6 +970,16 @@ async function rejectQuestion(id) {
 }
 
 let _eqMachineId = null;
+let _eqNewFile = null;
+
+function previewEqPhoto(input) {
+  if (!input.files[0]) return;
+  _eqNewFile = input.files[0];
+  resizeImgPromise(input.files[0], 1200, 900).then(b64 => {
+    const wrap = document.getElementById('eq-img-wrap');
+    if (wrap) wrap.innerHTML = '<img src="data:image/jpeg;base64,' + b64 + '" style="max-height:300px;max-width:100%;object-fit:contain;border-radius:8px;">';
+  });
+}
 
 function toggleEqMachine() {
   const na = document.getElementById('eq-machine-na').checked;
@@ -1006,6 +1021,7 @@ function openEditQuestion(id) {
   setVal('eq-optc', q.option_c);
   setVal('eq-optd', q.option_d);
   _eqMachineId = q.machine_id || null;
+  _eqNewFile = null;
   const eqNa = document.getElementById('eq-machine-na');
   const eqWrap = document.getElementById('eq-machine-wrap');
   const eqSel = document.getElementById('eq-machine-selected');
@@ -1050,6 +1066,11 @@ async function saveEditedQuestion() {
   statusEl.textContent = 'Guardando...';
   try {
     const patch = { type, question_text, correct_answer, option_b, option_c, option_d, machine_id: _eqMachineId || null };
+    if (_eqNewFile) {
+      const filename = makeFilename(_editingQuestionId, 'edit');
+      patch.image_url = await uploadPhoto(_eqNewFile, filename);
+      _eqNewFile = null;
+    }
     const r = await sbPatch('/rest/v1/quiz_questions?id=eq.' + _editingQuestionId, patch);
     if (!r.ok) { const e = await r.text(); throw new Error(e); }
     statusEl.textContent = '✓ Guardado.';

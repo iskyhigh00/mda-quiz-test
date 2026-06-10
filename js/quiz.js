@@ -10,12 +10,17 @@ function pickChip(g, v, el) {
 
 let _approvedQCounts = null;
 let _typeChipMsgTO = null;
+let _minQPerType = 15;
 
 async function loadApprovedQCounts() {
   try {
-    const rows = await sbGet('/rest/v1/quiz_questions?status=eq.approved&select=type');
+    const [qRows, settingRows] = await Promise.all([
+      sbGet('/rest/v1/quiz_questions?status=eq.approved&select=type'),
+      sbGet('/rest/v1/settings?key=eq.min_q_per_type')
+    ]);
     _approvedQCounts = { falla: 0, curiosidad: 0, repuesto: 0 };
-    rows.forEach(r => { if (_approvedQCounts[r.type] !== undefined) _approvedQCounts[r.type]++; });
+    qRows.forEach(r => { if (_approvedQCounts[r.type] !== undefined) _approvedQCounts[r.type]++; });
+    if (settingRows[0]?.value) _minQPerType = parseInt(settingRows[0].value) || 15;
   } catch (e) {
     _approvedQCounts = { falla: 0, curiosidad: 0, repuesto: 0 };
   }
@@ -24,7 +29,7 @@ async function loadApprovedQCounts() {
 
 function updateTypeChipAvailability() {
   if (!_approvedQCounts) return;
-  const MIN = 15;
+  const MIN = _minQPerType;
   ['falla', 'curiosidad', 'repuesto'].forEach(type => {
     const count = _approvedQCounts[type] || 0;
     const chipEl = document.querySelector('[data-type="' + type + '"]');
