@@ -1,4 +1,4 @@
-const CACHE = 'mda-v4';
+const CACHE = 'mda-v5';
 const IMG_CACHE = 'mda-images-v1';
 const SHELL = [
   './',

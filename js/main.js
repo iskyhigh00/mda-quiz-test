@@ -32,6 +32,16 @@ function showUpdateBanner() {
   if (b) b.style.display = 'flex';
 }
 
+async function doUpdate() {
+  try {
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+  } catch(e) {}
+  location.reload();
+}
+
 async function checkVersion() {
   try {
     const r = await fetch('./version.json?t=' + Date.now(), { cache: 'no-store' });
