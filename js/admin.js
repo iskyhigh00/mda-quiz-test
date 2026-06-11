@@ -43,6 +43,19 @@ function renderPaletteSelect() {
 }
 document.addEventListener('DOMContentLoaded', renderPaletteSelect);
 
+function openPaletteModal() {
+  const wrap = document.getElementById('palette-swatches');
+  if (!wrap) return;
+  const current = localStorage.getItem('mda_palette') || 'noche';
+  wrap.innerHTML = Object.entries(COLOR_PALETTES).map(([k, p]) =>
+    '<div onclick="applyPalette(\'' + k + '\');closeModal(\'modal-palette\')" style="cursor:pointer;background:' + p['--card'] + ';border:2px solid ' + (k === current ? p['--accent'] : p['--border']) + ';border-radius:10px;padding:10px 8px;text-align:center;">' +
+    '<div style="width:28px;height:28px;border-radius:50%;background:' + p['--accent'] + ';margin:0 auto 6px;box-shadow:0 0 8px ' + p['--accent'] + '66;"></div>' +
+    '<div style="font-size:0.76rem;color:' + p['--text'] + ';font-weight:' + (k === current ? '700' : '400') + ';">' + p.name + '</div>' +
+    '</div>'
+  ).join('');
+  openModal('modal-palette');
+}
+
 async function adminLogin() {
   if (adminUnlocked) {
     goTo('admin');
