@@ -379,8 +379,9 @@ function renderQBrowser() {
   const q = _lbQuestions[_lbQIdx];
   document.getElementById('qb-counter').textContent = (_lbQIdx + 1) + ' / ' + _lbQuestions.length;
   const imgWrap = document.getElementById('qb-img');
+  const safeUrl = (q.image_url || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
   imgWrap.innerHTML = q.image_url
-    ? '<img src="' + getImgUrl(q.image_url) + '" onclick="openImgPreview(' + JSON.stringify(q.image_url) + ')" style="max-width:100%;max-height:45vh;object-fit:contain;border-radius:8px;cursor:zoom-in;" loading="lazy">'
+    ? '<img src="' + getImgUrl(q.image_url) + '" onclick="openImgPreview(\'' + safeUrl + '\')" style="max-width:100%;max-height:45vh;object-fit:contain;border-radius:8px;cursor:zoom-in;" loading="lazy">'
     : '<div style="color:var(--muted);font-size:0.82rem;padding:16px 0;">Sin imagen</div>';
   const label = q.question_text.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\s*\?+\s*$/, '').trim();
   const answer = q.correct_answer.replace(/</g,'&lt;').replace(/>/g,'&gt;');

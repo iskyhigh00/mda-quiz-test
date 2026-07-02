@@ -1050,8 +1050,10 @@ function openEditQuestion(id) {
   } else {
     if (eqNa) eqNa.checked = true;
     if (eqWrap) eqWrap.style.display = 'none';
+    if (eqSearch) eqSearch.value = '';
     if (eqSel) eqSel.style.display = 'none';
   }
+  filterEqMachines();
   const wrap = document.getElementById('eq-img-wrap');
   if (wrap) wrap.innerHTML = q.image_url
     ? '<img src="' + getImgUrl(q.image_url) + '" style="max-height:300px;max-width:100%;object-fit:contain;border-radius:8px;">'
