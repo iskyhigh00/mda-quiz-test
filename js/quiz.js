@@ -55,7 +55,7 @@ function pickTypeChip(type, el) {
 
   if (el.classList.contains('chip-disabled')) {
     const count = parseInt(el.dataset.count || '0');
-    showTypeChipMsg('Faltan preguntas aprobadas (' + count + '/15)');
+    showTypeChipMsg('Faltan preguntas aprobadas (' + count + '/' + _minQPerType + ')');
     return;
   }
 
