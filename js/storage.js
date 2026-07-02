@@ -56,7 +56,10 @@ async function uploadPhoto(file, filename, maxW = 1200, maxH = 900) {
 }
 
 function getImgUrl(url) {
-  return url ? url + '?t=' + Date.now() : '';
+  // Cada foto subida tiene un nombre de archivo único (makeFilename agrega Date.now()),
+  // así que la URL nunca cambia de contenido. Sin query string, el navegador y el
+  // Service Worker pueden reutilizar la foto ya descargada en vez de pedirla de nuevo.
+  return url || '';
 }
 
 function photoUrl(p) {
