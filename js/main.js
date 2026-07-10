@@ -38,6 +38,8 @@ async function doUpdate() {
       const keys = await caches.keys();
       await Promise.all(keys.map(k => caches.delete(k)));
     }
+    const reg = await navigator.serviceWorker?.getRegistration();
+    if (reg) await reg.unregister();
   } catch(e) {}
   location.reload();
 }
@@ -53,7 +55,9 @@ async function checkVersion() {
 
 if ('serviceWorker' in navigator) {
   const hadController = !!navigator.serviceWorker.controller;
-  navigator.serviceWorker.register('./sw.js').catch(() => {});
+  // ?v=APP_VERSION fuerza al navegador a tratar el SW como un recurso nuevo en cada
+  // versión, evitando que quede pegado sirviendo una copia vieja desde su propio caché.
+  navigator.serviceWorker.register('./sw.js?v=' + APP_VERSION).catch(() => {});
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (hadController) showUpdateBanner();
   });

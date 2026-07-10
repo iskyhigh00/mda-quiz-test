@@ -1,4 +1,4 @@
-const CACHE = 'mda-v6';
+const CACHE = 'mda-v7';
 const IMG_CACHE = 'mda-images-v2';
 const SHELL = [
   './',
@@ -20,7 +20,8 @@ const SHELL = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)));
+  const reqs = SHELL.map(url => new Request(url, { cache: 'reload' }));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(reqs)));
   self.skipWaiting();
 });
 
@@ -70,7 +71,7 @@ self.addEventListener('fetch', e => {
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;
-      return fetch(e.request).then(res => {
+      return fetch(e.request, { cache: 'reload' }).then(res => {
         const clone = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, clone));
         return res;
