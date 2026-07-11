@@ -578,7 +578,7 @@ async function checkSuddenDeath(score) {
     const _sdDiffMult = (DIFFICULTIES[cfg.diff] || DIFFICULTIES.normal).finalMult;
     const maxPts = Math.round(maxPtsBase * _sdDiffMult);
     const top = await sbGet('/rest/v1/scores?season=eq.' + encodeURIComponent(compState.compId) + '&completed=eq.true&order=pts.desc&limit=1');
-    const tiesFirst = top.length > 0 && score >= top[0].pts;
+    const tiesFirst = top.length > 0 && score === top[0].pts;
     if (tiesFirst || score >= maxPts) return await runSuddenDeath(score);
   } catch (e) {}
   return score;
