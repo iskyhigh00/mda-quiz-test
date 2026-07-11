@@ -118,7 +118,10 @@ function graceExtra() {
 
 function calcPts(ms) {
   const raw = Math.min(ms / (cfg.t * 1000), 1);
-  const baseGrace = cfg.t === 5 ? 0.20 : 0;
+  // Bono "valiente y rápido": dificultad difícil + pregunta de modelo (el combo con menos tiempo),
+  // sin importar cuántos segundos tenga configurados esa dificultad.
+  const isHardMachineQ = cfg.diff === 'dificil' && qCurrentQ && qCurrentQ.source === 'machine';
+  const baseGrace = isHardMachineQ ? 0.20 : 0;
   const extraGrace = graceExtra() / cfg.t;
   const totalGrace = Math.min(baseGrace + extraGrace, 0.99);
   const frac = totalGrace > 0 ? Math.max(0, (raw - totalGrace) / (1 - totalGrace)) : raw;
