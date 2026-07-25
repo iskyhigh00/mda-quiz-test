@@ -398,11 +398,15 @@ async function preloadAndCountdown() {
 }
 
 async function startQuiz() {
-  playerName = playerName || localStorage.getItem('mda_user_name') || '';
-  if (!playerName) {
-    await mdaAlert('Primero configura tu nombre en el catálogo.');
-    goTo('catalog');
-    return;
+  // Red de seguridad: normalmente el nombre ya se pidió al entrar a la pestaña Quiz.
+  if (!ensureName()) {
+    const entered = await mdaPrompt('Ingresa tu nombre o apodo para jugar:');
+    if (entered === null) return;
+    const trimmed = entered.trim();
+    if (!trimmed) { await mdaAlert('El nombre no puede estar vacío.'); return; }
+    localStorage.setItem('mda_user_name', trimmed);
+    playerName = trimmed;
+    if (typeof _updateUserBar === 'function') _updateUserBar();
   }
 
   const pl = MACHINES.filter(m => m.photo_url);

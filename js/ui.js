@@ -25,20 +25,29 @@ function closeModal(id) {
   }
 }
 
-async function goTo(v, _historyOp = 'push') {
-  if (v === 'setup') {
-    let saved = localStorage.getItem('mda_user_name') || '';
-    if (!saved && !playerName) {
-      const entered = await mdaPrompt('Ingresa tu nombre o apodo para jugar el quiz:');
-      if (entered === null) return;
-      const trimmed = entered.trim();
-      if (!trimmed) { await mdaAlert('El nombre no puede estar vacío.'); return; }
-      localStorage.setItem('mda_user_name', trimmed);
-      saved = trimmed;
-      _updateUserBar();
-    }
-    if (saved && !playerName) playerName = saved;
+// Pestaña Quiz: pide el nombre solo si aún no hay uno guardado.
+// El nombre NO se pide al entrar a la app (catálogo y ranking son de libre acceso).
+async function goToQuiz() {
+  if (!ensureName()) {
+    const entered = await mdaPrompt('Ingresa tu nombre o apodo para jugar el quiz:');
+    if (entered === null) return;
+    const trimmed = entered.trim();
+    if (!trimmed) { await mdaAlert('El nombre no puede estar vacío.'); return; }
+    localStorage.setItem('mda_user_name', trimmed);
+    playerName = trimmed;
+    _updateUserBar();
   }
+  goTo('setup');
+}
+
+// Rellena playerName desde localStorage si hace falta. Devuelve true si hay nombre.
+function ensureName() {
+  if (!playerName) playerName = localStorage.getItem('mda_user_name') || '';
+  return !!playerName;
+}
+
+function goTo(v, _historyOp = 'push') {
+  if (v === 'setup') ensureName();
 
   const currentView = document.querySelector('.view.active')?.id;
   if (currentView === 'view-quiz' && v !== 'quiz' && v !== 'results') {
