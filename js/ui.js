@@ -25,9 +25,18 @@ function closeModal(id) {
   }
 }
 
-function goTo(v, _historyOp = 'push') {
+async function goTo(v, _historyOp = 'push') {
   if (v === 'setup') {
-    const saved = localStorage.getItem('mda_user_name') || '';
+    let saved = localStorage.getItem('mda_user_name') || '';
+    if (!saved && !playerName) {
+      const entered = await mdaPrompt('Ingresa tu nombre o apodo para jugar el quiz:');
+      if (entered === null) return;
+      const trimmed = entered.trim();
+      if (!trimmed) { await mdaAlert('El nombre no puede estar vacío.'); return; }
+      localStorage.setItem('mda_user_name', trimmed);
+      saved = trimmed;
+      _updateUserBar();
+    }
     if (saved && !playerName) playerName = saved;
   }
 
@@ -78,26 +87,16 @@ function goTo(v, _historyOp = 'push') {
 }
 
 function initApp() {
+  // El catálogo y ranking son de libre acceso, sin pedir nombre. El nombre
+  // solo se pide al entrar a la pestaña Quiz (ver goTo() en este mismo archivo).
   const saved = localStorage.getItem('mda_user_name');
+  if (saved && saved.trim()) playerName = saved.trim();
   const nav = document.querySelector('nav');
+  if (nav) nav.style.display = 'flex';
   const welcome = document.getElementById('view-welcome');
-  const catalog = document.getElementById('view-catalog');
-  
-  if (saved && saved.trim()) {
-    playerName = saved.trim();
-    if (nav) nav.style.display = 'flex';
-    if (welcome) welcome.classList.remove('active');
-    if (catalog) catalog.classList.add('active');
-    _updateUserBar();
-    goTo('catalog', 'replace');
-  } else {
-    if (nav) nav.style.display = 'none';
-    if (welcome) welcome.classList.add('active');
-    document.querySelectorAll('.view').forEach(view => {
-      if (view.id !== 'view-welcome') view.classList.remove('active');
-    });
-    setTimeout(() => document.getElementById('welcome-name-input')?.focus(), 200);
-  }
+  if (welcome) welcome.classList.remove('active');
+  _updateUserBar();
+  goTo('catalog', 'replace');
 }
 
 function confirmWelcome() {
@@ -122,7 +121,7 @@ function confirmWelcome() {
 
 function _updateUserBar() {
   const el = document.getElementById('user-bar-name');
-  if (el) el.textContent = '👤 ' + (playerName || localStorage.getItem('mda_user_name') || '');
+  if (el) el.textContent = '👤 ' + (playerName || localStorage.getItem('mda_user_name') || 'Invitado');
 }
 
 async function changeName() {
