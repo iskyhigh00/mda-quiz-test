@@ -1,4 +1,4 @@
-const CACHE = 'mda-v9';
+const CACHE = 'mda-v10';
 const IMG_CACHE = 'mda-images-v4';
 const SHELL = [
   './',
@@ -16,6 +16,7 @@ const SHELL = [
   './js/ranking.js',
   './js/questions.js',
   './js/admin.js',
+  './js/export-fotos.js',
   './js/main.js'
 ];
 

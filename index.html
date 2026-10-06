@@ -217,7 +217,7 @@
     </div>
   </div>
   <div id="atab-modelos" class="atab-panel" style="display:none;">
-    <div class="admin-toolbar"><input class="admin-search" id="admin-search" placeholder="Buscar modelo..." oninput="renderAdmin()"><button class="btn btn-primary" onclick="openAdd()">+ Agregar</button><span class="sync-badge sync-loading" id="sync-badge">...</span></div>
+    <div class="admin-toolbar"><input class="admin-search" id="admin-search" placeholder="Buscar modelo..." oninput="renderAdmin()"><button class="btn btn-primary" onclick="openAdd()">+ Agregar</button><button class="btn btn-secondary" onclick="descargarFotosCatalogo(this)" title="ZIP con todas las fotos nombradas por modelo + referencia.csv">⬇ Descargar fotos</button><span class="sync-badge sync-loading" id="sync-badge">...</span></div>
     <div class="section-box"><div class="section-head">🎰 Modelos <span id="admin-count"></span></div><div id="admin-list"></div></div>
   </div>
   <div id="atab-estadisticas" class="atab-panel" style="display:none;">
@@ -381,6 +381,7 @@
 <script src="js/ranking.js"></script>
 <script src="js/questions.js"></script>
 <script src="js/admin.js"></script>
+<script src="js/export-fotos.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>
