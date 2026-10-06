@@ -2,11 +2,13 @@
 // CONFIGURACIÓN Y VARIABLES GLOBALES
 // ============================================
 
-const APP_VERSION = '1.4.4';
+const APP_VERSION = '1.4.5';
 
 // Supabase
-const SB = 'https://xomyutrarimpefhwxnij.supabase.co';
-const KEY = 'sb_publishable_GMFe8QUEC5OPKFLwKxXOBA_Yl1dBykn';
+// 06-oct-2026: el proyecto nuevo (xomyutrarimpefhwxnij) ya no existe en ninguna cuenta;
+// se vuelve al proyecto "mda-quiz" (etapmrnynqtqqjleujok), activo.
+const SB = 'https://etapmrnynqtqqjleujok.supabase.co';
+const KEY = 'sb_publishable_1GjAGxMyz7BTBa4NLVzAEw_-GPKqFCN';
 const BUCKET = 'mda-photos';
 const STORAGE_URL = SB + '/storage/v1/object/' + BUCKET + '/';
 const STORAGE_PUBLIC = SB + '/storage/v1/object/public/' + BUCKET + '/';

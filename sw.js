@@ -1,5 +1,5 @@
-const CACHE = 'mda-v7';
-const IMG_CACHE = 'mda-images-v2';
+const CACHE = 'mda-v8';
+const IMG_CACHE = 'mda-images-v3';
 const SHELL = [
   './',
   './index.html',
