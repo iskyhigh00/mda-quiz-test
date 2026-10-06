@@ -4,8 +4,20 @@
 
 async function loadMachines() {
   setSyncBadge('loading');
+  const res = await sbGetChecked('/rest/v1/machines?order=name.asc&limit=500&select=id,name,sort_order,photo_url,photo_urls');
+
+  // Sin respuesta del servidor: no es lo mismo que no haber modelos, y el
+  // catálogo tiene que decirlo en vez de fingir que la base está vacía.
+  if (!res.ok) {
+    setSyncBadge('err');
+    MACHINES = [];
+    buildCatalog({ offline: true, error: res.error });
+    updateCounts();
+    return;
+  }
+
   try {
-    const rows = await sbGet('/rest/v1/machines?order=name.asc&limit=500&select=id,name,sort_order,photo_url,photo_urls');
+    const rows = res.rows;
     MACHINES = rows.map(r => {
       let extraPhotos = [];
       try {
@@ -33,13 +45,25 @@ function updateCounts() {
   const wi = MACHINES.filter(m => m.photo_url).length;
   const ac = document.getElementById('admin-count');
   if (ac) ac.textContent = '(' + n + ' total, ' + wi + ' con foto)';
+  // El contador del catálogo solo se actualizaba al escribir en el buscador, así
+  // que al cargar la página se quedaba con el "Cargando..." del HTML para siempre.
+  const cc = document.getElementById('cat-count');
+  if (cc) cc.textContent = n + ' modelo' + (n !== 1 ? 's' : '');
 }
 
-function buildCatalog() {
+function buildCatalog(opts = {}) {
   const g = document.getElementById('grid');
   g.innerHTML = '';
   if (!MACHINES.length) {
-    g.innerHTML = '<div class="loading">Sin modelos. Agrega desde Admin.</div>';
+    if (opts.offline) {
+      g.innerHTML =
+        '<div class="loading">⚠️ No se pudo conectar con el servidor.<br>' +
+        'Revisa tu conexión, o si el proyecto de Supabase está pausado.' +
+        (opts.error ? '<br><span style="opacity:0.6;font-size:0.85em;">(' + opts.error + ')</span>' : '') +
+        '<br><br><button class="btn btn-primary" onclick="loadMachines()">Reintentar</button></div>';
+    } else {
+      g.innerHTML = '<div class="loading">Sin modelos. Agrega desde Admin.</div>';
+    }
     return;
   }
   MACHINES.forEach(m => {

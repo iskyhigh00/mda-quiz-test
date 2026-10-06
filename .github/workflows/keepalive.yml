@@ -1,0 +1,60 @@
+name: Keep-alive Supabase
+
+# Supabase pausa los proyectos del plan gratuito tras 7 días sin actividad en la
+# base de datos, y mientras está pausado la app queda completamente vacía.
+# Esta rutina hace una consulta mínima cada día para que el proyecto nunca se
+# considere inactivo.
+#
+# Además sirve de alerta temprana: si la consulta falla, el workflow falla y
+# GitHub envía un correo. Así te enteras de una caída sin tener que abrir la app.
+#
+# OJO: los workflows programados solo corren desde la rama por defecto (main).
+# En la rama test no se ejecutan.
+
+on:
+  schedule:
+    # Todos los días a las 13:23 UTC. Minuto no redondo a propósito: a las horas
+    # en punto GitHub tiene mucha carga y los trabajos se retrasan.
+    - cron: '23 13 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Consultar Supabase
+        run: |
+          # La URL y la clave se leen de js/config.js en vez de estar copiadas
+          # aquí, para que esto siga funcionando si algún día se migra a otro
+          # proyecto de Supabase (ya pasó una vez, en junio).
+          SB=$(sed -n "s/^const SB = '\(.*\)';.*$/\1/p" js/config.js)
+          KEY=$(sed -n "s/^const KEY = '\(.*\)';.*$/\1/p" js/config.js)
+          echo "::add-mask::$KEY"
+
+          if [ -z "$SB" ] || [ -z "$KEY" ]; then
+            echo "::error::No se pudo leer SB o KEY desde js/config.js"
+            exit 1
+          fi
+          echo "Proyecto: $SB"
+
+          code=$(curl -sS -m 30 -o respuesta.txt -w '%{http_code}' \
+            "$SB/rest/v1/machines?select=id&limit=1" \
+            -H "apikey: $KEY" \
+            -H "Authorization: Bearer $KEY" || echo "000")
+
+          echo "Respuesta HTTP: $code"
+          head -c 400 respuesta.txt 2>/dev/null || true
+          echo
+
+          if [ "$code" != "200" ]; then
+            echo "::error::Supabase respondió $code. El proyecto puede estar pausado, caído, o la clave pudo haber cambiado."
+            exit 1
+          fi
+
+          echo "Proyecto activo. Consulta registrada como actividad."
