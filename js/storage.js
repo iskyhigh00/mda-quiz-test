@@ -59,7 +59,9 @@ function getImgUrl(url) {
   // Cada foto subida tiene un nombre de archivo único (makeFilename agrega Date.now()),
   // así que la URL nunca cambia de contenido. Sin query string, el navegador y el
   // Service Worker pueden reutilizar la foto ya descargada en vez de pedirla de nuevo.
-  return url || '';
+  // 06-oct-2026: fotos guardadas con la dirección del proyecto que ya no existe
+  // (xomyutrarimpefhwxnij) se leen desde el proyecto activo (mismo bucket y nombre).
+  return String(url || '').replace(/https:\/\/[a-z0-9]+\.supabase\.co\/storage\/v1\/object\/(public\/)?/, STORAGE_PUBLIC.replace(/[^/]+\/$/, ''));
 }
 
 function photoUrl(p) {

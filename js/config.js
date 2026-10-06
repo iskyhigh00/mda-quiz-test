@@ -2,7 +2,7 @@
 // CONFIGURACIÓN Y VARIABLES GLOBALES
 // ============================================
 
-const APP_VERSION = '1.4.5';
+const APP_VERSION = '1.4.6';
 
 // Supabase
 // 06-oct-2026: el proyecto nuevo (xomyutrarimpefhwxnij) ya no existe en ninguna cuenta;
